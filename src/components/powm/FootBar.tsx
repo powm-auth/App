@@ -1,0 +1,107 @@
+import React from 'react';
+import { View, Pressable, StyleSheet, ViewStyle, Platform } from 'react-native';
+import { useRouter, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PowmIcon, PowmIconName } from './PowmIcon';
+import { PowmText } from './PowmText';
+import { Row } from './Row';
+import { powmColors, powmSpacing } from '@/theme/powm-tokens';
+
+/**
+ * FootBar Component
+ *
+ * Bottom navigation bar for Powm app.
+ * Shows History, Home, and Profile tabs with active state.
+ *
+ * @example
+ * <FootBar />
+ */
+
+interface FootBarTab {
+  name: string;
+  label: string;
+  icon: PowmIconName;
+  route: string;
+}
+
+const TABS: FootBarTab[] = [
+  { name: 'history', label: 'History', icon: 'clock', route: '/history' },
+  { name: 'home', label: 'Home', icon: 'home', route: '/' },
+  { name: 'profile', label: 'Profile', icon: 'profile', route: '/profile' },
+];
+
+export const FootBar: React.FC = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+
+  const isActive = (route: string) => {
+    if (route === '/') {
+      return pathname === '/';
+    }
+    return pathname.startsWith(route);
+  };
+
+  // iPhone 16 height: 852px, footer: 94px ≈ 11% of screen height
+  // Use combination of fixed height + safe area for better consistency
+  const footerHeight = 70; // Base height
+  const totalHeight = footerHeight + insets.bottom;
+
+  return (
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      <Row justify="space-around" align="center" style={styles.tabsContainer}>
+        {TABS.map((tab) => {
+          const active = isActive(tab.route);
+          return (
+            <Pressable
+              key={tab.name}
+              onPress={() => router.push(tab.route as any)}
+              style={styles.tab}
+            >
+              <View style={styles.tabContent}>
+                <PowmIcon
+                  name={tab.icon}
+                  size={24}
+                  color={active ? powmColors.electricMain : powmColors.inactive}
+                />
+                <PowmText
+                  variant="text"
+                  color={active ? powmColors.electricMain : powmColors.inactive}
+                  style={styles.tabLabel}
+                >
+                  {tab.label}
+                </PowmText>
+              </View>
+            </Pressable>
+          );
+        })}
+      </Row>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: powmColors.mainBackground,
+    borderTopWidth: 1,
+    borderTopColor: powmColors.mainBackgroundAlt,
+    minHeight: 70, // Base height without safe area
+  },
+  tabsContainer: {
+    paddingTop: powmSpacing.lg,
+    paddingHorizontal: powmSpacing.base,
+    paddingBottom: powmSpacing.sm,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  tabContent: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  tabLabel: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+});
