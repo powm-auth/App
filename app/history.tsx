@@ -132,14 +132,14 @@ export default function HistoryScreen() {
         {/* Activity List */}
         <Column gap={powmSpacing.xs} style={styles.activityList}>
           {MOCK_ACTIVITY.map((item) => (
-            <Card key={item.id} style={styles.activityCard}>
+            <Card key={item.id} style={styles.activityCard} variant="alt">
               <Row gap={powmSpacing.base} align="center" justify="space-between">
                 {/* Icon and Name */}
                 <Row gap={powmSpacing.base} align="center" flex={1}>
                   <View style={[styles.activityIcon, { backgroundColor: item.iconColor }]}>
                     <PowmIcon name="face" size={24} color={powmColors.white} />
                   </View>
-                  <Column flex={1}>
+                  <Column flex={1} gap={powmSpacing.xs}>
                     <PowmText variant="subtitleSemiBold">{item.name}</PowmText>
                     <PowmText variant="text" color={powmColors.inactive}>
                       {item.timestamp} {item.date}
@@ -212,7 +212,8 @@ const styles = StyleSheet.create({
     marginBottom: powmSpacing.xxl,
   },
   activityCard: {
-    padding: powmSpacing.base,
+    padding: 13,
+    backgroundColor: powmColors.rowBackground,
   },
   activityIcon: {
     width: 48,

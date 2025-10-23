@@ -11,9 +11,17 @@ export const powmColors = {
   activeElectricMain: '#606BE2',
   activeElectricFade: '#1E1E74',
 
+  // Scan Button
+  scanButtonBg: '#1F1938',
+
+  // Orange Electric
+  orangeElectricMain: '#FF9A2E',
+  orangeElectricFade: '#4E3A24',
+
   // Backgrounds
   mainBackground: '#060410',
   mainBackgroundAlt: '#2A2834',
+  rowBackground: 'rgba(26, 24, 36, 0.86)',
 
   // Neutral
   white: '#FFFFFF',

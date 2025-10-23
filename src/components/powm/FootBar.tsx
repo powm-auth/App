@@ -1,11 +1,11 @@
+import { powmColors, powmSpacing } from '@/theme/powm-tokens';
+import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
-import { View, Pressable, StyleSheet, ViewStyle, Platform } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PowmIcon, PowmIconName } from './PowmIcon';
 import { PowmText } from './PowmText';
 import { Row } from './Row';
-import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 
 /**
  * FootBar Component
@@ -44,12 +44,12 @@ export const FootBar: React.FC = () => {
 
   // iPhone 16 height: 852px, footer: 94px ≈ 11% of screen height
   // Use combination of fixed height + safe area for better consistency
-  const footerHeight = 70; // Base height
+  const footerHeight = 94; // Base height
   const totalHeight = footerHeight + insets.bottom;
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <Row justify="space-around" align="center" style={styles.tabsContainer}>
+      <Row justify="center" align="center" style={styles.tabsContainer}>
         {TABS.map((tab) => {
           const active = isActive(tab.route);
           return (
@@ -61,8 +61,9 @@ export const FootBar: React.FC = () => {
               <View style={styles.tabContent}>
                 <PowmIcon
                   name={tab.icon}
-                  size={24}
+                  size={26}
                   color={active ? powmColors.electricMain : powmColors.inactive}
+                  active={active}
                 />
                 <PowmText
                   variant="text"
@@ -85,23 +86,24 @@ const styles = StyleSheet.create({
     backgroundColor: powmColors.mainBackground,
     borderTopWidth: 1,
     borderTopColor: powmColors.mainBackgroundAlt,
-    minHeight: 70, // Base height without safe area
+    minHeight: 94, // Base height without safe area
   },
   tabsContainer: {
     paddingTop: powmSpacing.lg,
     paddingHorizontal: powmSpacing.base,
     paddingBottom: powmSpacing.sm,
+    gap: powmSpacing.xxl,
   },
   tab: {
-    flex: 1,
     alignItems: 'center',
+    minWidth: 60,
   },
   tabContent: {
     alignItems: 'center',
-    gap: 4,
+    gap: 0,
   },
   tabLabel: {
     fontSize: 11,
-    marginTop: 2,
+    marginTop: 0,
   },
 });

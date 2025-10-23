@@ -108,6 +108,7 @@ export default function ProfileScreen() {
                   key={itemIndex}
                   onPress={item.onPress}
                   style={styles.menuCard}
+                  variant="alt"
                 >
                   <Row gap={powmSpacing.base} align="center" justify="space-between">
                     {/* Icon and Label */}
@@ -157,7 +158,8 @@ const styles = StyleSheet.create({
     marginBottom: powmSpacing.sm,
   },
   menuCard: {
-    padding: powmSpacing.base,
+    padding: 13,
+    backgroundColor: powmColors.rowBackground,
   },
   menuIcon: {
     width: 48,

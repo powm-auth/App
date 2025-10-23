@@ -10,3 +10,4 @@ export * from './PowmText';
 export * from './PowmIcon';
 export * from './FootBar';
 export * from './BackgroundImage';
+export * from './Toggle';

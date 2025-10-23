@@ -1,6 +1,7 @@
+import { powmColors } from '@/theme/powm-tokens';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { ImageBackground, StyleSheet, ViewStyle } from 'react-native';
-import { powmColors } from '@/theme/powm-tokens';
 
 /**
  * BackgroundImage Component
@@ -17,9 +18,16 @@ import { powmColors } from '@/theme/powm-tokens';
 export interface BackgroundImageProps {
   children: React.ReactNode;
   style?: ViewStyle;
+  gradient?: boolean;
+  gradientOpacity?: number;
 }
 
-export const BackgroundImage: React.FC<BackgroundImageProps> = ({ children, style }) => {
+export const BackgroundImage: React.FC<BackgroundImageProps> = ({
+  children,
+  style,
+  gradient = true,
+  gradientOpacity = 0.45
+}) => {
   return (
     <ImageBackground
       source={require('@/assets/powm/illustrations/powm_draw.png')}
@@ -27,6 +35,13 @@ export const BackgroundImage: React.FC<BackgroundImageProps> = ({ children, styl
       resizeMode="cover"
       imageStyle={styles.image}
     >
+      {gradient && (
+        <LinearGradient
+          colors={[`rgba(0, 0, 0, ${gradientOpacity})`, powmColors.mainBackground]}
+          locations={[0, 1]}
+          style={styles.gradient}
+        />
+      )}
       {children}
     </ImageBackground>
   );
@@ -38,6 +53,18 @@ const styles = StyleSheet.create({
     backgroundColor: powmColors.mainBackground,
   },
   image: {
-    opacity: 0.6, // Adjust opacity so text remains readable
+    opacity: 1, // Very subtle opacity
+    top: 'auto', // Position in lower portion of screen
+    bottom: 'auto',
+    left: 'auto',
+    right: 'auto',
+    transform: [
+      { translateX: -1000 },
+      { translateY: -500 }, // Move image up by 100 pixels
+      { scale: 1 }, // Slight zoom in for better coverage
+    ],
+  },
+  gradient: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
