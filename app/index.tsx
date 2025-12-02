@@ -10,24 +10,40 @@ import {
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Animated, ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// Import the new Notification Panel
+import { Notification, NotificationPanel } from '@/components/NotificationPanel';
 
 /**
  * Home Screen
- *
- * Main landing page of Powm app.
- * Features:
- * - QR Code Scanner section
- * - ID Tickets list
- * - Navigation to scanning/creating tickets
  */
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [popupAnimation] = useState(new Animated.Value(0));
-  // State for showing ticket modal and storing current ticket details
+  
+  // -- Notification State --
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([
+    {
+      id: '1',
+      title: 'Welcome to Powm',
+      message: 'Verify your identity securely.',
+      type: 'info',
+      timestamp: new Date(),
+      read: false,
+    },
+    {
+      id: '2',
+      title: 'ID Verification',
+      message: 'Your age verification was successful.',
+      type: 'success',
+      timestamp: new Date(),
+      read: true,
+    }
+  ]);
+
+  // -- Ticket Modal State --
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [currentTicket, setCurrentTicket] = useState<{ firstname?: string; lastname?: string; age?: string; country?: string } | null>(null);
   const [ticketId, setTicketId] = useState('');
@@ -43,9 +59,7 @@ export default function HomeScreen() {
     return id;
   };
 
-  // Handle "see" button press for an ID ticket. Sets the current ticket details and shows the modal.
   const handleSeeTicket = () => {
-    // Example ticket info for the "Name" ticket
     setCurrentTicket({
       firstname: 'John',
       lastname: 'Doe',
@@ -54,166 +68,118 @@ export default function HomeScreen() {
     setShowTicketModal(true);
   };
 
-  const toggleNotifications = () => {
-    if (!showNotifications) {
-      setShowNotifications(true);
-      Animated.timing(popupAnimation, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(popupAnimation, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start(() => setShowNotifications(false));
-    }
+  const handleMarkAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   return (
     <BackgroundImage>
       <View style={styles.container}>
-        {/* Overlay to close notification popup */}
-        {showNotifications && (
-          <Pressable
-            style={styles.overlay}
-            onPress={toggleNotifications}
-          />
-        )}
+        
+        {/* Notification Panel Component */}
+        <NotificationPanel 
+          isOpen={isNotificationPanelOpen}
+          onClose={() => setIsNotificationPanelOpen(false)}
+          notifications={notifications}
+          onMarkAllRead={handleMarkAllRead}
+        />
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}
         >
-        {/* Header with Welcome and Bell (placeholder for spacing) */}
-        <Row justify="space-between" align="center" style={styles.header}>
-          <PowmText variant="title">Welcome</PowmText>
-          <View style={{ width: 48, height: 48 }} />
-        </Row>
+          {/* Header */}
+          <Row justify="space-between" align="center" style={styles.header}>
+            <PowmText variant="title">Welcome</PowmText>
+            {/* Spacer for bell alignment */}
+            <View style={{ width: 48, height: 48 }} />
+          </Row>
 
-        {/* QR Code Scanner Card */}
-        <ImageBackground
-          source={require('@/assets/powm/illustrations/powm_draw.png')}
-          style={styles.qrCard}
-          imageStyle={styles.qrCardImage}
-          resizeMode="cover"
-        >
-          <View style={styles.qrCardOverlay} />
-          <View style={styles.qrCardContent}>
-            <Column gap={powmSpacing.sm}>
-              <PowmText variant="subtitle" color={powmColors.white}>
-                Prove your age or identity
-              </PowmText>
-              <PowmText variant="title">QRcode Scanner</PowmText>
-              <PowmText variant="text" color={powmColors.inactive}>
-                Website requests you to scan to prove your age to access.
-              </PowmText>
+          {/* QR Code Scanner Card */}
+          <ImageBackground
+            source={require('@/assets/powm/illustrations/powm_draw.png')}
+            style={styles.qrCard}
+            imageStyle={styles.qrCardImage}
+            resizeMode="cover"
+          >
+            <View style={styles.qrCardOverlay} />
+            <View style={styles.qrCardContent}>
+              <Column gap={powmSpacing.sm}>
+                <PowmText variant="subtitle" color={powmColors.white}>
+                  Prove your age or identity
+                </PowmText>
+                <PowmText variant="title">QRcode Scanner</PowmText>
+                <PowmText variant="text" color={powmColors.inactive}>
+                  Website requests you to scan to prove your age to access.
+                </PowmText>
 
-              {/* QR Code Icon */}
-              <View style={styles.qrIconContainer}>
-                <View style={styles.qrIcon}>
-                  <PowmIcon name="qrcode" size={54} color={powmColors.gray} />
+                <View style={styles.qrIconContainer}>
+                  <View style={styles.qrIcon}>
+                    <PowmIcon name="qrcode" size={54} color={powmColors.gray} />
+                  </View>
                 </View>
-              </View>
-            </Column>
-          </View>
-        </ImageBackground>
-
-        {/* ID Tickets Section */}
-        <Column gap={powmSpacing.sm} style={styles.ticketsSection}>
-          <PowmText variant="subtitle">ID Tickets</PowmText>
-
-          {/* Scan an ID Ticket */}
-          <Card
-            onPress={() => console.log('Scan ID Ticket')}
-            style={styles.scanTicketCard}
-            variant="alt"
-          >
-            <Row gap={powmSpacing.base} align="center">
-              <View style={[styles.ticketIcon, { backgroundColor: powmColors.scanButtonBg }]}>
-                <PowmIcon name="qrcode" size={32} color={powmColors.activeElectricMain} />
-              </View>
-              <Column flex={1} gap={powmSpacing.xs}>
-                <PowmText variant="subtitleSemiBold">Scan an ID Ticket</PowmText>
-                <PowmText variant="text" color={powmColors.inactive}>
-                  Check info from a QRCode
-                </PowmText>
               </Column>
-            </Row>
-          </Card>
+            </View>
+          </ImageBackground>
 
-          {/* Name Ticket */}
-          <TicketCard
-            icon={{
-              name: 'powmLogo',
-              backgroundColor: powmColors.electricFade,
-              color: powmColors.electricMain,
-              size: 48,
-            }}
-            title="Name"
-            subtitle="First and Lastname Proof"
-            showSeeButton
-            // When user presses "see", open a modal with the ticket preview
-            onSeePress={handleSeeTicket}
-            style={styles.ticketCard}
-          />
+          {/* ID Tickets Section */}
+          <Column gap={powmSpacing.sm} style={styles.ticketsSection}>
+            <PowmText variant="subtitle">ID Tickets</PowmText>
 
-          {/* Create an ID Ticket */}
-          <Card
-            onPress={() => router.push('/create-ticket')}
-            style={styles.ticketCard}
-            variant="alt"
-          >
-            <Row gap={powmSpacing.base} align="center">
-              <View style={[styles.ticketIcon, { backgroundColor: powmColors.orangeElectricFade }]}>
-                <PowmIcon name="add" size={48} color={powmColors.orangeElectricMain} />
-              </View>
-              <Column flex={1} gap={powmSpacing.xs}>
-                <PowmText variant="subtitleSemiBold">Create an ID Ticket</PowmText>
-                <PowmText variant="text" color={powmColors.inactive}>
-                  Prove your identity to someone
-                </PowmText>
-              </Column>
-            </Row>
-          </Card>
-        </Column>
+            {/* 1. Create an ID Ticket (Moved to top, replaced Scan) */}
+            <Card
+              onPress={() => router.push('/create-ticket')}
+              style={styles.createTicketCard} // Reusing styling logic
+              variant="alt"
+            >
+              <Row gap={powmSpacing.base} align="center">
+                <View style={[styles.ticketIcon, { backgroundColor: powmColors.orangeElectricFade }]}>
+                  <PowmIcon name="add" size={48} color={powmColors.orangeElectricMain} />
+                </View>
+                <Column flex={1} gap={powmSpacing.xs}>
+                  <PowmText variant="subtitleSemiBold">Create an ID Ticket</PowmText>
+                  <PowmText variant="text" color={powmColors.inactive}>
+                    Prove your identity to someone
+                  </PowmText>
+                </Column>
+              </Row>
+            </Card>
+
+            {/* 2. Name Ticket */}
+            <TicketCard
+              icon={{
+                name: 'powmLogo',
+                backgroundColor: powmColors.electricFade,
+                color: powmColors.electricMain,
+                size: 48,
+              }}
+              title="Name"
+              subtitle="First and Lastname Proof"
+              showSeeButton
+              onSeePress={handleSeeTicket}
+              style={styles.ticketCard}
+            />
+          </Column>
         </ScrollView>
 
-        {/* Bell Button - Outside ScrollView for proper z-index */}
+        {/* Bell Button */}
         <Pressable
           style={[
             styles.bellButton,
-            {
-              top: insets.top + powmSpacing.lg,
-            },
+            { top: insets.top + powmSpacing.lg },
           ]}
-          onPress={toggleNotifications}
+          onPress={() => setIsNotificationPanelOpen(true)}
         >
           <PowmIcon name="bell" size={24} color={powmColors.white} />
+          {/* Optional red dot if unread */}
+          {notifications.some(n => !n.read) && (
+             <View style={styles.notificationDot} />
+          )}
         </Pressable>
-
-        {/* Notification Popup - Outside ScrollView for proper z-index */}
-        {showNotifications && (
-          <Animated.View
-            style={[
-              styles.notificationPopup,
-              {
-                top: insets.top + powmSpacing.lg,
-                opacity: popupAnimation,
-              },
-            ]}
-          >
-            <PowmText variant="subtitle" style={styles.notificationText}>
-              No notifications
-            </PowmText>
-          </Animated.View>
-        )}
 
         {/* Ticket Modal Overlay */}
         {showTicketModal && currentTicket && (
           <>
-            {/* Darken the background */}
             <Pressable
               style={styles.modalOverlay}
               onPress={() => setShowTicketModal(false)}
@@ -236,7 +202,6 @@ export default function HomeScreen() {
                       Available for 24H
                     </PowmText>
                     <Row justify="space-between" align="flex-start" style={styles.modalTicketContent}>
-                      {/* Left: ticket info */}
                       <Column gap={powmSpacing.xs}>
                         {currentTicket.firstname && (
                           <PowmText variant="title">{currentTicket.firstname}</PowmText>
@@ -244,14 +209,7 @@ export default function HomeScreen() {
                         {currentTicket.lastname && (
                           <PowmText variant="text">{currentTicket.lastname}</PowmText>
                         )}
-                        {currentTicket.age && (
-                          <PowmText variant="subtitle">{currentTicket.age}</PowmText>
-                        )}
-                        {currentTicket.country && (
-                          <PowmText variant="text">{currentTicket.country}</PowmText>
-                        )}
                       </Column>
-                      {/* Right: QR Code */}
                       <View style={styles.modalQrCode}>
                         <PowmIcon name="qrcode" size={80} color={powmColors.mainBackground} />
                       </View>
@@ -262,7 +220,6 @@ export default function HomeScreen() {
             </View>
           </>
         )}
-
       </View>
     </BackgroundImage>
   );
@@ -295,30 +252,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(42, 40, 52, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1001,
+    zIndex: 1000,
   },
-  notificationPopup: {
+  notificationDot: {
     position: 'absolute',
-    right: powmSpacing.lg,
-    backgroundColor: powmColors.rowBackground,
-    borderTopLeftRadius: powmRadii.md,
-    borderTopRightRadius: 25,
-    borderBottomLeftRadius: powmRadii.md,
-    borderBottomRightRadius: powmRadii.md,
-    padding: powmSpacing.lg,
-    width: 280,
-    minHeight: 120, // 2.5 times the bell circle height (48px)
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 999,
-  },
-  notificationText: {
-    textAlign: 'center',
+    top: 12,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: powmColors.orangeElectricMain,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 40, 52, 0.8)',
   },
   qrCard: {
     marginBottom: powmSpacing.xl,
@@ -362,24 +307,19 @@ const styles = StyleSheet.create({
     padding: 13,
     backgroundColor: powmColors.rowBackground,
   },
-  scanTicketCard: {
+  createTicketCard: {
     padding: 13,
-    backgroundColor: powmColors.scanButtonBg,
-    marginBottom: powmSpacing.sm, // Double spacing
+    backgroundColor: powmColors.rowBackground, // Changed from scanButtonBg to match row style or keep alt
+    marginBottom: powmSpacing.sm,
   },
   ticketIcon: {
     width: 48,
     height: 48,
-    borderRadius: powmRadii.full, // Circular icons
+    borderRadius: powmRadii.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  seeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  // Styles for the ticket modal overlay
+  // Modal Styles
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.85)',
