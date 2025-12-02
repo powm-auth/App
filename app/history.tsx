@@ -1,153 +1,180 @@
 import {
   BackgroundImage,
+  Column,
   PowmIcon,
   PowmText,
   Row,
-  TicketCard,
 } from '@/components/powm';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
+  LayoutAnimation,
   PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  UIManager,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/**
- * History/Activity Screen
- *
- * Shows user's activity history including:
- * - Scanned tickets
- * - Third-party verifications
- * - Delete mode for removing history items
- */
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 interface ActivityItem {
   id: string;
   name: string;
-  timestamp: string;
-  date: string;
+  time: string;
+  dateLabel: string;
   type: 'trusted' | 'anonymous';
   iconColor: string;
 }
 
 const MOCK_ACTIVITY: ActivityItem[] = [
-  {
-    id: '1',
-    name: 'Instagram',
-    timestamp: '18h36',
-    date: '17/08/2024',
-    type: 'trusted',
-    iconColor: powmColors.electricMain,
-  },
-  {
-    id: '2',
-    name: 'Youtube',
-    timestamp: '18h36',
-    date: '17/08/2024',
-    type: 'trusted',
-    iconColor: powmColors.electricMain,
-  },
-  {
-    id: '3',
-    name: 'Instagram',
-    timestamp: '18h36',
-    date: '17/08/2024',
-    type: 'trusted',
-    iconColor: powmColors.electricMain,
-  },
-  {
-    id: '4',
-    name: 'Tabac.fr',
-    timestamp: '18h36',
-    date: '17/08/2024',
-    type: 'trusted',
-    iconColor: powmColors.electricMain,
-  },
-  {
-    id: '5',
-    name: 'Harry H',
-    timestamp: '18h36',
-    date: '17/08/2024',
-    type: 'anonymous',
-    iconColor: '#B8860B',
-  },
-  {
-    id: '6',
-    name: 'Pornhub',
-    timestamp: '18h36',
-    date: '17/08/2024',
-    type: 'trusted',
-    iconColor: powmColors.electricMain,
-  },
-  {
-    id: '7',
-    name: 'TikTok',
-    timestamp: '18h36',
-    date: '17/08/2024',
-    type: 'trusted',
-    iconColor: powmColors.electricMain,
-  },
+  { id: '1', name: 'Instagram', time: '18:36', dateLabel: 'Today', type: 'trusted', iconColor: powmColors.activeElectricMain },
+  { id: '2', name: 'Youtube', time: '16:20', dateLabel: 'Today', type: 'trusted', iconColor: '#FF0000' },
+  { id: '5', name: 'Harry H', time: '14:05', dateLabel: 'Today', type: 'anonymous', iconColor: '#B8860B' },
+  { id: '3', name: 'Tabac.fr', time: '09:12', dateLabel: 'Yesterday', type: 'trusted', iconColor: powmColors.orangeElectricMain },
+  { id: '4', name: 'Pornhub', time: '23:45', dateLabel: 'Yesterday', type: 'trusted', iconColor: powmColors.activeElectricMain },
+  { id: '7', name: 'TikTok', time: '20:30', dateLabel: 'Aug 15', type: 'trusted', iconColor: '#000000' },
 ];
+
+const HistoryListItem = ({ 
+  item, 
+  index, 
+  isEditing, 
+  onDelete 
+}: { 
+  item: ActivityItem; 
+  index: number; 
+  isEditing: boolean;
+  onDelete: (id: string) => void;
+}) => {
+  const translateY = useRef(new Animated.Value(50)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const deleteScale = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 500,
+        delay: index * 80,
+        easing: Easing.out(Easing.back(1.2)),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 400,
+        delay: index * 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  useEffect(() => {
+    Animated.spring(deleteScale, {
+      toValue: isEditing ? 1 : 0,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  }, [isEditing]);
+
+  return (
+    <Animated.View style={[styles.itemContainer, { opacity, transform: [{ translateY }] }]}>
+      <View style={styles.itemInner}>
+        {/* Left: Icon (Larger) */}
+        <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.07)' }]}>
+          <PowmIcon 
+            name={item.type === 'anonymous' ? 'face' : 'powmLogo'} 
+            size={24} // Increased from 22
+            color={item.iconColor} 
+          />
+        </View>
+
+        {/* Center: Info */}
+        <Column flex={1} justify="center" gap={4}>
+          <PowmText variant="subtitleSemiBold" style={{ fontSize: 16 }}>{item.name}</PowmText> 
+          <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13 }}>
+            {item.type === 'anonymous' ? 'Anonymous check' : 'Identity verified'} • {item.time}
+          </PowmText>
+        </Column>
+
+        {/* Right: Badge or Delete Button */}
+        <View style={styles.itemRight}>
+          {isEditing ? (
+            <Pressable onPress={() => onDelete(item.id)} hitSlop={10}>
+              <Animated.View style={{ transform: [{ scale: deleteScale }] }}>
+                <View style={styles.deleteActionCircle}>
+                  <PowmIcon name="cross" size={16} color={powmColors.white} />
+                </View>
+              </Animated.View>
+            </Pressable>
+          ) : (
+            <View style={[
+              styles.statusBadge, 
+              { backgroundColor: item.type === 'trusted' ? 'rgba(96, 107, 226, 0.15)' : 'rgba(184, 134, 11, 0.15)' }
+            ]}>
+              <PowmText 
+                variant="text" 
+                style={{ 
+                  fontSize: 11, 
+                  color: item.type === 'trusted' ? powmColors.activeElectricMain : '#B8860B',
+                  fontWeight: '600'
+                }}
+              >
+                {item.type === 'trusted' ? 'Trusted' : 'Anon'}
+              </PowmText>
+            </View>
+          )}
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
 
 export default function HistoryScreen() {
   const [activities, setActivities] = useState<ActivityItem[]>(MOCK_ACTIVITY);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const progress = useRef(new Animated.Value(0)).current;
+  const [isEditing, setIsEditing] = useState(false);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // Gestion suppression de l’historique
-  const handlePressIn = () => {
-    progress.stopAnimation(() => {
-      Animated.timing(progress, {
-        toValue: 1,
-        duration: 4000,
-        useNativeDriver: false,
-      }).start(({ finished }) => {
-        if (finished) {
-          setShowDeleteConfirm(true);
-        }
-      });
-    });
+  const groupedActivities = activities.reduce((acc, item) => {
+    if (!acc[item.dateLabel]) acc[item.dateLabel] = [];
+    acc[item.dateLabel].push(item);
+    return acc;
+  }, {} as Record<string, ActivityItem[]>);
+
+  const toggleEditMode = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsEditing(!isEditing);
   };
 
-  const handlePressOut = () => {
-    progress.stopAnimation(() => {
-      Animated.timing(progress, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
-    });
+  const handleDeleteItem = (id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+    setActivities(prev => prev.filter(i => i.id !== id));
   };
 
-  const handleConfirmDelete = () => {
+  const handleClearAll = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
     setActivities([]);
-    setShowDeleteConfirm(false);
-    progress.setValue(0);
+    setIsEditing(false);
   };
 
-  const handleCancelDelete = () => {
-    setShowDeleteConfirm(false);
-    progress.setValue(0);
-  };
-
-  // Swipe vers la droite (retour à Home)
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_evt, gesture) => {
-        const { dx, dy } = gesture;
-        return Math.abs(dx) > 20 && Math.abs(dy) < 10;
+        return Math.abs(gesture.dx) > 30 && Math.abs(gesture.dy) < 20;
       },
       onPanResponderRelease: (_evt, gesture) => {
-        const { dx } = gesture;
-        if (dx > 50) {
+        if (gesture.dx > 50) {
           router.push('/');
         }
       },
@@ -160,102 +187,67 @@ export default function HistoryScreen() {
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}
+          showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <PowmText variant="title" style={styles.header}>
-            Activity
-          </PowmText>
-          {/* Delete Activity Button */}
-          <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} style={styles.deleteButton}>
-            <Animated.View
-              style={[
-                styles.deleteProgress,
-                {
-                  width: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0%', '100%'],
-                  }),
-                },
-              ]}
-            />
-            <Row gap={powmSpacing.sm} align="center" style={styles.deleteButtonContent}>
-              <PowmIcon name="cross" size={20} color={powmColors.white} />
-              <PowmText variant="subtitleSemiBold">Delete activity</PowmText>
-            </Row>
-          </Pressable>
+          <Row justify="space-between" align="center" style={styles.header}>
+            <PowmText variant="title">History</PowmText>
+            {activities.length > 0 && (
+              <Pressable onPress={toggleEditMode} style={styles.headerAction} hitSlop={10}>
+                <PowmText 
+                  variant="text" 
+                  color={isEditing ? powmColors.electricMain : powmColors.gray}
+                  style={{ fontWeight: '600', fontSize: 13 }}
+                >
+                  {isEditing ? 'Done' : 'Edit'}
+                </PowmText>
+              </Pressable>
+            )}
+          </Row>
 
-          {/* Activity List */}
-          <View style={styles.activityList}>
-            {activities.map((item) => (
-              <TicketCard
-                key={item.id}
-                icon={{
-                  name: 'powmLogo',
-                  backgroundColor:
-                    item.type === 'trusted'
-                      ? powmColors.activeElectricFade
-                      : powmColors.orangeElectricFade,
-                  color:
-                    item.type === 'trusted'
-                      ? powmColors.activeElectricMain
-                      : powmColors.orangeElectricMain,
-                  size: 48,
-                }}
-                title={item.name}
-                subtitle={`${item.timestamp} ${item.date}`}
-                tag={{
-                  label: item.type === 'trusted' ? 'Trusted by Powm' : 'Anonymous',
-                  backgroundColor:
-                    item.type === 'trusted'
-                      ? powmColors.activeElectricFade
-                      : '#B8860B',
-                }}
-                expandable={item.type === 'anonymous' && item.name === 'Harry H'}
-                expandedContent={
-                  item.type === 'anonymous' && item.name === 'Harry H'
-                    ? 'Harry H checked your Name and Age on this ticket XXXXXXX XXXXX'
-                    : undefined
-                }
-                style={{ marginBottom: powmSpacing.xs }}
-              />
+          {activities.length === 0 && (
+            <Animated.View style={styles.emptyState}>
+              <PowmIcon name="clock" size={56} color={powmColors.inactive} style={{ opacity: 0.5, marginBottom: 16 }} />
+              <PowmText variant="subtitle" color={powmColors.gray}>No activity yet</PowmText>
+              <PowmText variant="text" color={powmColors.inactive} align="center" style={{ marginTop: 8 }}>
+                Your verification history will appear here.
+              </PowmText>
+            </Animated.View>
+          )}
+
+          {isEditing && activities.length > 0 && (
+            <Pressable onPress={handleClearAll} style={styles.clearAllContainer}>
+               <PowmText variant="text" color={powmColors.deletionRedHard} style={{ fontWeight: 'bold' }}>
+                 Clear all history
+               </PowmText>
+            </Pressable>
+          )}
+
+          <View style={styles.listContainer}>
+            {Object.entries(groupedActivities).map(([dateLabel, items], groupIndex) => (
+              <View key={dateLabel} style={styles.groupContainer}>
+                <PowmText variant="subtitleSemiBold" color={powmColors.gray} style={styles.groupTitle}>
+                  {dateLabel}
+                </PowmText>
+                
+                <View style={styles.groupCard}>
+                  {items.map((item, index) => (
+                    <React.Fragment key={item.id}>
+                      {index > 0 && <View style={styles.separator} />}
+                      <HistoryListItem 
+                        item={item} 
+                        index={(groupIndex * 5) + index}
+                        isEditing={isEditing}
+                        onDelete={handleDeleteItem}
+                      />
+                    </React.Fragment>
+                  ))}
+                </View>
+              </View>
             ))}
           </View>
-        </ScrollView>
 
-        {/* Confirmation Popup */}
-        {showDeleteConfirm && (
-          <>
-            <Pressable style={styles.overlay} onPress={handleCancelDelete} />
-            <View style={styles.confirmPopup}>
-              <PowmText variant="subtitle" style={styles.confirmTitle}>
-                Are you sure?
-              </PowmText>
-              <PowmText variant="text" color={powmColors.inactive} style={styles.confirmText}>
-                This will delete your activity history.
-              </PowmText>
-              <Row gap={powmSpacing.md} style={styles.confirmButtons}>
-                <Pressable
-                  style={[styles.confirmButton, styles.noButton]}
-                  onPress={handleCancelDelete}
-                >
-                  <Row gap={powmSpacing.sm} align="center">
-                    <PowmIcon name="cross" size={20} color={powmColors.white} />
-                    <PowmText variant="subtitleSemiBold">No</PowmText>
-                  </Row>
-                </Pressable>
-                <Pressable
-                  style={[styles.confirmButton, styles.yesButton]}
-                  onPress={handleConfirmDelete}
-                >
-                  <Row gap={powmSpacing.sm} align="center">
-                    <PowmIcon name="check" size={20} color={powmColors.white} />
-                    <PowmText variant="subtitleSemiBold">Yes</PowmText>
-                  </Row>
-                </Pressable>
-              </Row>
-            </View>
-          </>
-        )}
+          <View style={{ height: 100 }} />
+        </ScrollView>
       </View>
     </BackgroundImage>
   );
@@ -270,77 +262,86 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: powmSpacing.lg,
-    paddingBottom: powmSpacing.xxl,
   },
   header: {
     marginBottom: powmSpacing.lg,
+    height: 44,
   },
-  deleteButton: {
-    backgroundColor: powmColors.deletionRedHard,
-    borderRadius: powmRadii.md,
-    paddingVertical: powmSpacing.base,
-    paddingHorizontal: powmSpacing.lg,
-    marginBottom: powmSpacing.lg,
-    height: 56,
+  headerAction: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 20,
+  },
+  listContainer: {
+    gap: powmSpacing.xl,
+  },
+  groupContainer: {
+    gap: powmSpacing.sm,
+  },
+  groupTitle: {
+    fontSize: 14,
+    marginLeft: 6,
+    opacity: 0.7,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  groupCard: {
+    backgroundColor: 'rgba(30, 28, 40, 0.6)',
+    borderRadius: powmRadii.xl,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
-  deleteProgress: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: powmColors.deletionRedAlt,
-    borderRadius: powmRadii.md,
-  },
-  activityList: {
-    gap: powmSpacing.xs,
-    marginBottom: powmSpacing.xl,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    zIndex: 998,
-  },
-  confirmPopup: {
-    position: 'absolute',
-    top: '35%',
-    left: powmSpacing.xl,
-    right: powmSpacing.xl,
-    backgroundColor: '#1A1824',
-    borderRadius: powmRadii.lg,
-    padding: powmSpacing.xl,
-    zIndex: 999,
-  },
-  confirmTitle: {
-    marginBottom: powmSpacing.md,
-    textAlign: 'center',
-  },
-  confirmText: {
-    marginBottom: powmSpacing.xl,
-    textAlign: 'center',
-  },
-  confirmButtons: {
-    justifyContent: 'center',
-  },
-  confirmButton: {
-    flex: 1,
-    paddingVertical: powmSpacing.md,
-    paddingHorizontal: powmSpacing.lg,
-    borderRadius: powmRadii.md,
+  itemContainer: {},
+  itemInner: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 16, // Increased vertical padding
+    paddingHorizontal: 16,
+    gap: 16, // Increased gap
   },
-  noButton: {
-    backgroundColor: powmColors.mainBackgroundAlt,
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    marginLeft: 76, // 16 (padding) + 44 (icon) + 16 (gap) = 76
   },
-  yesButton: {
-    backgroundColor: powmColors.electricMain,
-  },
-  deleteButtonContent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  iconCircle: {
+    width: 44, // Increased from 36
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  itemRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 50,
+  },
+  statusBadge: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  deleteActionCircle: {
+    width: 32, // Larger touch target
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: powmColors.deletionRedHard,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearAllContainer: {
+    alignItems: 'center',
+    marginBottom: powmSpacing.md,
+    padding: 8,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 100,
+    opacity: 0.8,
   },
 });
