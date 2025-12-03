@@ -34,9 +34,21 @@ export default function RootLayout() {
               name="identity-documents" 
               options={{ animation: 'slide_from_right', gestureEnabled: true }} 
             />
-            {/* ✅ NEW: My Data */}
             <Stack.Screen 
               name="my-data" 
+              options={{ animation: 'slide_from_right', gestureEnabled: true }} 
+            />
+            <Stack.Screen 
+              name="account" 
+              options={{ animation: 'slide_from_right', gestureEnabled: true }} 
+            />
+            <Stack.Screen 
+              name="notifications" 
+              options={{ animation: 'slide_from_right', gestureEnabled: true }} 
+            />
+            {/* ✅ NEW: Help */}
+            <Stack.Screen 
+              name="help" 
               options={{ animation: 'slide_from_right', gestureEnabled: true }} 
             />
 

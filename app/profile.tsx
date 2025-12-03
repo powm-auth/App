@@ -111,17 +111,17 @@ export default function ProfileScreen() {
         {
           icon: 'data',
           label: 'My data',
-          onPress: () => router.push('/my-data'), // ✅ LINKED
+          onPress: () => router.push('/my-data'),
         },
         {
           icon: 'profile',
           label: 'Account',
-          onPress: () => console.log('Account'),
+          onPress: () => router.push('/account'),
         },
         {
           icon: 'bell',
           label: 'Notifications',
-          onPress: () => console.log('Notifications'),
+          onPress: () => router.push('/notifications'),
         },
       ],
     },
@@ -131,7 +131,7 @@ export default function ProfileScreen() {
         {
           icon: 'face',
           label: 'Help',
-          onPress: () => console.log('Help'),
+          onPress: () => router.push('/help'), // ✅ LINKED
         },
       ],
     },
