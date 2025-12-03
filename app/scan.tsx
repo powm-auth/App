@@ -11,19 +11,17 @@ import {
   Pressable,
   StatusBar,
   StyleSheet,
-  View
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
-const SCAN_SIZE = width * 0.7; // Size of the scanning window
+const SCAN_SIZE = width * 0.7;
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  
-  // Scanning line animation
   const scanAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -33,7 +31,6 @@ export default function ScanScreen() {
   }, [permission]);
 
   useEffect(() => {
-    // Infinite up/down scanning animation
     Animated.loop(
       Animated.sequence([
         Animated.timing(scanAnim, {
@@ -52,7 +49,6 @@ export default function ScanScreen() {
     ).start();
   }, []);
 
-  // Interpolate value for scanning line position
   const translateY = scanAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, SCAN_SIZE], 
@@ -60,8 +56,7 @@ export default function ScanScreen() {
 
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     console.log('Scanned:', data);
-    // Add your logic here (e.g., vibrate, navigate, show modal)
-    router.back(); // For now, just close scanner
+    router.push('/validate-identity'); 
   };
 
   if (!permission) return <View style={styles.container} />;
@@ -97,25 +92,19 @@ export default function ScanScreen() {
         facing="back"
         onBarcodeScanned={handleBarcodeScanned}
       >
-        {/* Dark Overlay System */}
         <View style={styles.overlayContainer}>
           
-          {/* Top Mask */}
           <View style={styles.maskTop} />
           
-          {/* Middle Row (Mask Left + Scan Window + Mask Right) */}
           <View style={styles.maskMiddle}>
             <View style={styles.maskSide} />
             
-            {/* The Scan Window */}
             <View style={styles.scanWindow}>
-              {/* Corner Markers */}
               <View style={[styles.corner, styles.topLeft]} />
               <View style={[styles.corner, styles.topRight]} />
               <View style={[styles.corner, styles.bottomLeft]} />
               <View style={[styles.corner, styles.bottomRight]} />
 
-              {/* Animated Laser Line */}
               <Animated.View 
                 style={[
                   styles.laserLineContainer,
@@ -140,16 +129,22 @@ export default function ScanScreen() {
             <View style={styles.maskSide} />
           </View>
 
-          {/* Bottom Mask */}
           <View style={styles.maskBottom}>
              <PowmText variant="text" color="rgba(255,255,255,0.7)" style={{ marginTop: 32 }}>
                Align the QR code within the frame
              </PowmText>
+
+             {/* TEST BUTTON */}
+             <Pressable 
+               style={styles.testButton}
+               onPress={() => router.push('/validate-identity')}
+             >
+               <PowmText variant="text" color={powmColors.white}>[TEST] Validate Identity</PowmText>
+             </Pressable>
           </View>
 
         </View>
 
-        {/* Header Controls (Close Button) */}
         <View style={[styles.header, { top: insets.top + 10 }]}>
           <Pressable 
             onPress={() => router.back()} 
@@ -162,7 +157,7 @@ export default function ScanScreen() {
           </Pressable>
           
           <View style={styles.badgeContainer}>
-            <PowmText variant="subtitleSemiBold" style={{ fontSize: 24 }}>Scan Code</PowmText>
+            <PowmText variant="subtitleSemiBold" style={{ fontSize: 14 }}>Scan Code</PowmText>
           </View>
           
           <View style={{ width: 40 }} /> 
@@ -190,8 +185,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: powmRadii.md,
   },
-  
-  // Overlay Masking System
   overlayContainer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
@@ -209,12 +202,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   maskBottom: {
-    flex: 1.2, // More space at bottom
+    flex: 1.2, 
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     alignItems: 'center',
   },
-
-  // Scan Window & Markers
   scanWindow: {
     width: SCAN_SIZE,
     height: SCAN_SIZE,
@@ -232,8 +223,6 @@ const styles = StyleSheet.create({
   topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
   bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
   bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
-
-  // Laser Animation
   laserLineContainer: {
     width: '100%',
     position: 'absolute',
@@ -248,11 +237,9 @@ const styles = StyleSheet.create({
   laserGlow: {
     height: 40,
     width: '90%',
-    marginTop: -20, // Center glow on line
+    marginTop: -20, 
     opacity: 0.6,
   },
-
-  // Header Controls
   header: {
     position: 'absolute',
     left: 0,
@@ -269,7 +256,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   closeButton: {
-    // Container for hitSlop
   },
   blurButtonBg: {
     width: 40,
@@ -286,7 +272,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 20,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
+  testButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+  }
 });

@@ -7,16 +7,6 @@ import { PowmIcon, PowmIconName } from './PowmIcon';
 import { PowmText } from './PowmText';
 import { Row } from './Row';
 
-/**
- * FootBar Component
- *
- * Bottom navigation bar for Powm app.
- * Shows History, Home, and Profile tabs with active state.
- *
- * @example
- * <FootBar />
- */
-
 interface FootBarTab {
   name: string;
   label: string;
@@ -30,7 +20,6 @@ const TABS: FootBarTab[] = [
   { name: 'profile', label: 'Profile', icon: 'profile', route: '/profile' },
 ];
 
-// Helper pour connaître l’ordre des pages (History=0, Home=1, Profile=2)
 const getIndex = (route: string) => {
   if (route === '/history') return 0;
   if (route === '/') return 1;
@@ -43,18 +32,26 @@ export const FootBar: React.FC = () => {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
+  // Hide footer on full-screen flows
+  const isHidden = pathname === '/scan' || pathname === '/validate-identity';
+
   const isActive = (route: string) => {
-    if (route === '/') return pathname === '/';
+    if (route === '/') {
+      return pathname === '/';
+    }
     return pathname.startsWith(route);
   };
 
-  // iPhone 16 height: 852px, footer: 94px ≈ 11% of screen height
-  // Use combination of fixed height + safe area for better consistency
-  const footerHeight = 94; // Base height
-  const totalHeight = footerHeight + insets.bottom;
-
-return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+  return (
+    <View 
+      style={[
+        styles.container, 
+        // Collapse padding when hidden
+        { paddingBottom: isHidden ? 0 : insets.bottom },
+        // Collapse height/opacity when hidden (prevents unmount state loss)
+        isHidden && styles.hidden
+      ]}
+    >
       <Row justify="center" align="center" style={styles.tabsContainer}>
         {TABS.map((tab) => {
           const active = isActive(tab.route);
@@ -64,9 +61,16 @@ return (
               onPress={() => {
                 if (pathname === tab.route) return;
                 
-                // ✅ MODIFICATION : Navigation simple, sans params de transition
-                // L'animation 'fade' du _layout prendra le relais
-                router.push(tab.route as any);
+                const currentIndex = getIndex(pathname);
+                const targetIndex = getIndex(tab.route);
+                let transition: string | undefined;
+                if (targetIndex > currentIndex) transition = 'slide_from_right';
+                else if (targetIndex < currentIndex) transition = 'slide_from_left';
+                
+                router.push({
+                  pathname: tab.route as any,
+                  params: transition ? { transition } : {},
+                } as any);
               }}
               style={styles.tab}
             >
@@ -98,7 +102,15 @@ const styles = StyleSheet.create({
     backgroundColor: powmColors.mainBackground,
     borderTopWidth: 1,
     borderTopColor: powmColors.mainBackgroundAlt,
-    minHeight: 94, // Base height without safe area
+    paddingTop: 0,
+    zIndex: 100,
+    overflow: 'hidden',
+  },
+  hidden: {
+    height: 0,
+    borderTopWidth: 0,
+    paddingTop: 0,
+    opacity: 0,
   },
   tabsContainer: {
     paddingTop: powmSpacing.lg,
