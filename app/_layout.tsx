@@ -25,7 +25,7 @@ export default function RootLayout() {
             <Stack.Screen name="history" />
             <Stack.Screen name="profile" />
             
-            {/* Main Feature Screens */}
+            {/* Feature Screens */}
             <Stack.Screen 
               name="personal-info" 
               options={{ animation: 'slide_from_right', gestureEnabled: true }} 
@@ -34,8 +34,13 @@ export default function RootLayout() {
               name="identity-documents" 
               options={{ animation: 'slide_from_right', gestureEnabled: true }} 
             />
+            {/* ✅ NEW: My Data */}
+            <Stack.Screen 
+              name="my-data" 
+              options={{ animation: 'slide_from_right', gestureEnabled: true }} 
+            />
 
-            {/* Full Screen Scanners */}
+            {/* Scanners */}
             <Stack.Screen 
               name="scan" 
               options={{

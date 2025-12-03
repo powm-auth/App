@@ -31,7 +31,6 @@ interface MenuItem {
   onPress: () => void;
 }
 
-// Animated List Item Component
 const ProfileListItem = ({
   item,
   index,
@@ -90,14 +89,13 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // Define menu items inside component to access router
   const menuSections: MenuSection[] = [
     {
       title: 'My informations',
       items: [
         {
           icon: 'face',
-          label: 'Personal information', // Fixed typo "Personnal"
+          label: 'Personal information',
           onPress: () => router.push('/personal-info'),
         },
         {
@@ -113,7 +111,7 @@ export default function ProfileScreen() {
         {
           icon: 'data',
           label: 'My data',
-          onPress: () => console.log('My data'),
+          onPress: () => router.push('/my-data'), // ✅ LINKED
         },
         {
           icon: 'profile',
