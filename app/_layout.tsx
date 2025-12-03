@@ -18,20 +18,38 @@ export default function RootLayout() {
                 backgroundColor: powmColors.mainBackground,
               },
               gestureEnabled: false,
-              animation: 'fade', // Default fade for smooth page transitions
+              animation: 'fade',
             }}
           >
             <Stack.Screen name="index" />
             <Stack.Screen name="history" />
             <Stack.Screen name="profile" />
             
-            {/* ✅ FIXED: 'fullScreenModal' prevents the "popup card" scaling effect on Home */}
+            {/* Main Feature Screens */}
+            <Stack.Screen 
+              name="personal-info" 
+              options={{ animation: 'slide_from_right', gestureEnabled: true }} 
+            />
+            <Stack.Screen 
+              name="identity-documents" 
+              options={{ animation: 'slide_from_right', gestureEnabled: true }} 
+            />
+
+            {/* Full Screen Scanners */}
             <Stack.Screen 
               name="scan" 
               options={{
                 presentation: 'fullScreenModal',
                 gestureEnabled: false,
-                animation: 'fade', // Fade in the camera for a premium feel
+                animation: 'fade',
+              }}
+            />
+            <Stack.Screen 
+              name="scan-document" 
+              options={{
+                presentation: 'fullScreenModal',
+                gestureEnabled: false,
+                animation: 'fade',
               }}
             />
             
@@ -48,14 +66,13 @@ export default function RootLayout() {
               name="validate-identity"
               options={{
                 animation: 'slide_from_bottom',
-                presentation: 'modal', // Sheet style over the camera/home
+                presentation: 'modal',
                 gestureEnabled: true,
               }}
             />
           </Stack>
         </View>
         
-        {/* Footer sits outside the stack */}
         <FootBar />
       </View>
     </>
