@@ -1,4 +1,4 @@
-import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { powmColors, powmRadii } from '@/theme/powm-tokens';
 import React from 'react';
 import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 
@@ -6,40 +6,38 @@ interface GlassCardProps {
   children: React.ReactNode;
   onPress?: () => void;
   style?: ViewStyle;
-  variant?: 'default' | 'dark';
+  variant?: 'default' | 'danger';
   padding?: number;
+  transparent?: boolean; // ✅ NEW PROP
 }
 
-/**
- * Standard Glassmorphism Card.
- * Uses the centralized "glass" tokens.
- */
-export const GlassCard: React.FC<GlassCardProps> = ({
-  children,
-  onPress,
+export const GlassCard: React.FC<GlassCardProps> = ({ 
+  children, 
+  onPress, 
   style,
   variant = 'default',
   padding = 16,
+  transparent = false // Default to false (standard glass background)
 }) => {
-  const containerStyle: ViewStyle = {
-    padding,
-    backgroundColor:
-      variant === 'dark'
-        ? 'rgba(20, 18, 28, 0.8)' // Darker variant if needed
-        : powmColors.glass.background,
-    borderColor: powmColors.glass.border,
-    borderWidth: 1,
-    borderRadius: powmRadii.xl,
-    ...(style as ViewStyle),
-  };
+  const cardStyles: ViewStyle[] = [
+    styles.container,
+    { 
+      padding,
+      // If transparent is true, override background to transparent
+      backgroundColor: transparent ? 'transparent' : powmColors.glass.background 
+    },
+    variant === 'danger' && styles.dangerBorder,
+    style
+  ];
 
   if (onPress) {
     return (
-      <Pressable
+      <Pressable 
         onPress={onPress}
         style={({ pressed }) => [
-          containerStyle,
-          pressed && { backgroundColor: powmColors.glass.pressed },
+          ...cardStyles,
+          // Only show pressed state if not transparent, or use a very light overlay
+          pressed && { backgroundColor: transparent ? 'rgba(255,255,255,0.02)' : powmColors.glass.pressed }
         ]}
       >
         {children}
@@ -47,5 +45,18 @@ export const GlassCard: React.FC<GlassCardProps> = ({
     );
   }
 
-  return <View style={containerStyle}>{children}</View>;
+  return <View style={cardStyles}>{children}</View>;
 };
+
+const styles = StyleSheet.create({
+  container: {
+    // Default background is handled in component logic now
+    borderRadius: powmRadii.xl,
+    borderWidth: 1,
+    borderColor: powmColors.glass.border,
+    overflow: 'hidden',
+  },
+  dangerBorder: {
+    borderColor: 'rgba(255, 69, 58, 0.3)',
+  }
+});

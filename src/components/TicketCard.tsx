@@ -24,16 +24,6 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-/**
- * TicketCard Component
- *
- * Reusable card component for displaying tickets, activity items, etc.
- * Features Lovable-style animations:
- * - Staggered entrance (slide up + fade)
- * - Scale on press
- * - Smooth expansion
- */
-
 export interface TicketCardIcon {
   name: PowmIconName;
   backgroundColor: string;
@@ -57,7 +47,6 @@ export interface TicketCardProps {
   expandedContent?: string | React.ReactNode;
   onPress?: () => void;
   style?: ViewStyle;
-  /** Index for staggered entrance animation delay */
   index?: number;
 }
 
@@ -75,13 +64,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   index = 0,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-
-  // Animation Values
   const translateY = useRef(new Animated.Value(50)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
 
-  // Entrance Animation
   useEffect(() => {
     Animated.parallel([
       Animated.timing(translateY, {
@@ -133,35 +119,18 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   };
 
   return (
-    <Animated.View
-      style={[
-        {
-          opacity,
-          transform: [{ translateY }, { scale }],
-        },
-        style, // Apply style to the wrapper to ensure layout consistency
-      ]}
-    >
+    <Animated.View style={{ opacity, transform: [{ translateY }, { scale }] }}>
       <Pressable
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={styles.card}
+        // ✅ FIX: Merge 'style' here to allow background overrides (e.g. transparent)
+        style={({ pressed }) => [styles.card, style, pressed && { opacity: 0.8 }]}
       >
         <Row gap={powmSpacing.base} align="center" justify="space-between">
-          {/* Left: Icon + Title + Subtitle */}
           <Row gap={powmSpacing.base} align="center" flex={1}>
-            <View
-              style={[
-                styles.iconContainer,
-                { backgroundColor: icon.backgroundColor },
-              ]}
-            >
-              <PowmIcon
-                name={icon.name}
-                size={icon.size || 32}
-                color={icon.color || powmColors.white}
-              />
+            <View style={[styles.iconContainer, { backgroundColor: icon.backgroundColor }]}>
+              <PowmIcon name={icon.name} size={icon.size || 32} color={icon.color || powmColors.white} />
             </View>
             <Column flex={1} gap={powmSpacing.xs}>
               <PowmText variant="subtitleSemiBold">{title}</PowmText>
@@ -170,15 +139,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                   {subtitle}
                 </PowmText>
               )}
-              {/* Expanded content */}
               {expandable && isExpanded && expandedContent && (
                 <View style={styles.expandedContentContainer}>
                   {typeof expandedContent === 'string' ? (
-                    <PowmText
-                      variant="text"
-                      color={powmColors.inactive}
-                      style={styles.expandedText}
-                    >
+                    <PowmText variant="text" color={powmColors.inactive} style={styles.expandedText}>
                       {expandedContent}
                     </PowmText>
                   ) : (
@@ -189,38 +153,21 @@ export const TicketCard: React.FC<TicketCardProps> = ({
             </Column>
           </Row>
 
-          {/* Right: Tag or See Button */}
           {tag && (
             <View style={[styles.tag, { backgroundColor: tag.backgroundColor }]}>
-              <PowmText
-                variant="text"
-                color={powmColors.white}
-                style={styles.tagText}
-              >
+              <PowmText variant="text" color={powmColors.white} style={styles.tagText}>
                 {tag.label}
               </PowmText>
             </View>
           )}
 
           {showSeeButton && (
-            <Pressable
-              onPress={handleSeePress}
-              hitSlop={10}
-              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
-            >
+            <Pressable onPress={handleSeePress} hitSlop={10} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
               <Row gap={4} align="center">
-                <PowmText
-                  variant="text"
-                  color={powmColors.activeElectricMain}
-                  style={{ fontWeight: '600' }}
-                >
+                <PowmText variant="text" color={powmColors.activeElectricMain} style={{ fontWeight: '600' }}>
                   see
                 </PowmText>
-                <PowmIcon
-                  name="qrcode"
-                  size={14}
-                  color={powmColors.activeElectricMain}
-                />
+                <PowmIcon name="qrcode" size={14} color={powmColors.activeElectricMain} />
               </Row>
             </Pressable>
           )}
