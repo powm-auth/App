@@ -1,18 +1,15 @@
 import {
   AnimatedEntry,
   BackgroundImage,
-  Column,
   GlassCard,
-  PowmIcon,
   PowmText,
   Row,
-  ScreenHeader,
 } from '@/components';
-import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { ActivityItem, HistoryItem } from '@/components/history/HistoryItem';
+import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  Animated,
   LayoutAnimation,
   PanResponder,
   Platform,
@@ -24,20 +21,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-interface ActivityItem {
-  id: string;
-  name: string;
-  time: string;
-  dateLabel: string;
-  type: 'trusted' | 'anonymous';
-  iconColor: string;
-}
-
+// Mock Data
 const MOCK_ACTIVITY: ActivityItem[] = [
   { id: '1', name: 'Instagram', time: '18:36', dateLabel: 'Today', type: 'trusted', iconColor: powmColors.activeElectricMain },
   { id: '2', name: 'Youtube', time: '16:20', dateLabel: 'Today', type: 'trusted', iconColor: '#FF0000' },
@@ -47,85 +35,13 @@ const MOCK_ACTIVITY: ActivityItem[] = [
   { id: '7', name: 'TikTok', time: '20:30', dateLabel: 'Aug 15', type: 'trusted', iconColor: '#000000' },
 ];
 
-const HistoryListItem = ({ 
-  item, 
-  isEditing, 
-  onDelete 
-}: { 
-  item: ActivityItem; 
-  isEditing: boolean;
-  onDelete: (id: string) => void;
-}) => {
-  const deleteScale = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.spring(deleteScale, {
-      toValue: isEditing ? 1 : 0,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 7,
-    }).start();
-  }, [isEditing]);
-
-  return (
-    <View style={styles.itemContainer}>
-      <View style={styles.itemInner}>
-        {/* Left: Icon (Larger) */}
-        <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.07)' }]}>
-          <PowmIcon 
-            name={item.type === 'anonymous' ? 'face' : 'powmLogo'} 
-            size={24} 
-            color={item.iconColor} 
-          />
-        </View>
-
-        {/* Center: Info */}
-        <Column flex={1} justify="center" gap={4}>
-          <PowmText variant="subtitleSemiBold" style={{ fontSize: 16 }}>{item.name}</PowmText> 
-          <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13 }}>
-            {item.type === 'anonymous' ? 'Anonymous check' : 'Identity verified'} • {item.time}
-          </PowmText>
-        </Column>
-
-        {/* Right: Badge or Delete Button */}
-        <View style={styles.itemRight}>
-          {isEditing ? (
-            <Pressable onPress={() => onDelete(item.id)} hitSlop={10}>
-              <Animated.View style={{ transform: [{ scale: deleteScale }] }}>
-                <View style={styles.deleteActionCircle}>
-                  <PowmIcon name="cross" size={16} color={powmColors.white} />
-                </View>
-              </Animated.View>
-            </Pressable>
-          ) : (
-            <View style={[
-              styles.statusBadge, 
-              { backgroundColor: item.type === 'trusted' ? 'rgba(96, 107, 226, 0.15)' : 'rgba(184, 134, 11, 0.15)' }
-            ]}>
-              <PowmText 
-                variant="text" 
-                style={{ 
-                  fontSize: 11, 
-                  color: item.type === 'trusted' ? powmColors.activeElectricMain : '#B8860B',
-                  fontWeight: '600'
-                }}
-              >
-                {item.type === 'trusted' ? 'Trusted' : 'Anon'}
-              </PowmText>
-            </View>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-};
-
 export default function HistoryScreen() {
   const [activities, setActivities] = useState<ActivityItem[]>(MOCK_ACTIVITY);
   const [isEditing, setIsEditing] = useState(false);
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  // Group activities
   const groupedActivities = activities.reduce((acc, item) => {
     if (!acc[item.dateLabel]) acc[item.dateLabel] = [];
     acc[item.dateLabel].push(item);
@@ -148,6 +64,7 @@ export default function HistoryScreen() {
     setIsEditing(false);
   };
 
+  // Swipe Back Gesture
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_evt, gesture) => {
@@ -161,36 +78,41 @@ export default function HistoryScreen() {
     })
   ).current;
 
+  // Header Action Button (Edit / Done)
+  const HeaderAction = activities.length > 0 ? (
+    <Pressable onPress={toggleEditMode} style={styles.editButton} hitSlop={10}>
+      <PowmText 
+        variant="text" 
+        color={isEditing ? powmColors.electricMain : powmColors.gray}
+        style={{ fontWeight: '600', fontSize: 13 }}
+      >
+        {isEditing ? 'Done' : 'Edit'}
+      </PowmText>
+    </Pressable>
+  ) : null;
+
   return (
     <BackgroundImage>
       <View style={styles.container} {...panResponder.panHandlers}>
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: insets.top + powmSpacing.lg },
+          ]}
           showsVerticalScrollIndicator={false}
         >
-          <ScreenHeader 
-            title="History" 
-            showBackButton={false}
-            rightElement={
-              activities.length > 0 ? (
-                <Pressable onPress={toggleEditMode} style={styles.headerAction} hitSlop={10}>
-                  <PowmText 
-                    variant="text" 
-                    color={isEditing ? powmColors.electricMain : powmColors.gray}
-                    style={{ fontWeight: '600', fontSize: 13 }}
-                  >
-                    {isEditing ? 'Done' : 'Edit'}
-                  </PowmText>
-                </Pressable>
-              ) : undefined
-            }
-          />
+          {/* Header - Matching index.tsx style */}
+          <Row justify="space-between" align="center" style={styles.header}>
+            <PowmText variant="title">History</PowmText>
+            {/* Show Edit Button or Spacer to maintain layout */}
+            {HeaderAction || <View style={{ width: 48, height: 48 }} />}
+          </Row>
 
+          {/* Empty State */}
           {activities.length === 0 && (
             <AnimatedEntry>
               <View style={styles.emptyState}>
-                <PowmIcon name="clock" size={56} color={powmColors.inactive} style={{ opacity: 0.5, marginBottom: 16 }} />
                 <PowmText variant="subtitle" color={powmColors.gray}>No activity yet</PowmText>
                 <PowmText variant="text" color={powmColors.inactive} align="center" style={{ marginTop: 8 }}>
                   Your verification history will appear here.
@@ -199,6 +121,7 @@ export default function HistoryScreen() {
             </AnimatedEntry>
           )}
 
+          {/* Clear All Option */}
           {isEditing && activities.length > 0 && (
             <Pressable onPress={handleClearAll} style={styles.clearAllContainer}>
                <PowmText variant="text" color={powmColors.deletionRedHard} style={{ fontWeight: 'bold' }}>
@@ -207,34 +130,31 @@ export default function HistoryScreen() {
             </Pressable>
           )}
 
-          <Column gap={powmSpacing.xl}>
+          {/* Grouped List */}
+          <View style={styles.listContainer}>
             {Object.entries(groupedActivities).map(([dateLabel, items], groupIndex) => (
-              <View key={dateLabel} style={styles.groupContainer}>
-                <PowmText variant="subtitleSemiBold" color={powmColors.gray} style={styles.groupTitle}>
-                  {dateLabel}
-                </PowmText>
-                
-                <GlassCard padding={0}>
-                  {items.map((item, index) => (
-                    <AnimatedEntry 
-                      key={item.id} 
-                      index={(groupIndex * 5) + index}
-                      slideDistance={30}
-                    >
-                      <View>
-                        {index > 0 && <View style={styles.separator} />}
-                        <HistoryListItem 
-                          item={item} 
-                          isEditing={isEditing}
-                          onDelete={handleDeleteItem}
-                        />
-                      </View>
-                    </AnimatedEntry>
-                  ))}
-                </GlassCard>
-              </View>
+              <AnimatedEntry key={dateLabel} index={groupIndex}>
+                <View style={styles.groupContainer}>
+                  <PowmText variant="subtitleSemiBold" color={powmColors.gray} style={styles.groupTitle}>
+                    {dateLabel}
+                  </PowmText>
+                  
+                  {/* Using GlassCard as the Group Container (Revolut Style) */}
+                  <GlassCard padding={0}>
+                    {items.map((item, index) => (
+                      <HistoryItem 
+                        key={item.id}
+                        item={item}
+                        isEditing={isEditing}
+                        onDelete={handleDeleteItem}
+                        isLast={index === items.length - 1}
+                      />
+                    ))}
+                  </GlassCard>
+                </View>
+              </AnimatedEntry>
             ))}
-          </Column>
+          </View>
 
           <View style={{ height: 100 }} />
         </ScrollView>
@@ -244,24 +164,21 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
+  content: { paddingHorizontal: powmSpacing.lg },
+  header: {
+    marginBottom: powmSpacing.xl, // Updated to XL to match index.tsx
+    height: 48, // Updated to 48 to match index.tsx
   },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: powmSpacing.lg,
-  },
-  headerAction: {
+  editButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 20,
   },
-  groupContainer: {
-    gap: powmSpacing.sm,
-  },
+  listContainer: { gap: powmSpacing.xl },
+  groupContainer: { gap: powmSpacing.sm },
   groupTitle: {
     fontSize: 14,
     marginLeft: 6,
@@ -270,50 +187,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 4,
   },
-  itemContainer: {},
-  itemInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16, 
-    paddingHorizontal: 16,
-    gap: 16, 
-  },
-  separator: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    marginLeft: 76, 
-  },
-  iconCircle: {
-    width: 44, 
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  itemRight: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    minWidth: 50,
-  },
-  statusBadge: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-  },
-  deleteActionCircle: {
-    width: 32, 
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: powmColors.deletionRedHard,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   clearAllContainer: {
     alignItems: 'center',
     marginBottom: powmSpacing.md,
     padding: 8,
   },
   emptyState: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 100,
