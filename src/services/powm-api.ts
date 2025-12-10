@@ -7,7 +7,8 @@ import type { AcceptChallengeRequest, ClaimChallengeRequest, ClaimChallengeRespo
 
 // Android emulator uses 10.0.2.2 to reach host machine's localhost
 // For iOS simulator use 'localhost', for physical device use computer's IP
-const POWM_API_BASE = 'http://10.0.2.2:4443/api';
+//const POWM_API_BASE = 'http://10.0.2.2:4443/api';
+const POWM_API_BASE = 'https://api.powm.app/v1';
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 
 /**
@@ -73,8 +74,9 @@ export async function getIdentityChallenge(
 
     if (!response.ok) {
         const errorBody = await response.text();
+        console.error(`[PowmAPI] Failed to fetch challenge - Status: ${response.status}, Body:`, errorBody);
         throw new PowmApiError(
-            `Failed to fetch challenge: ${response.statusText}`,
+            `Failed to fetch challenge (HTTP ${response.status}): ${response.statusText}`,
             response.status,
             errorBody
         );
@@ -102,8 +104,9 @@ export async function claimIdentityChallenge(
 
     if (!response.ok) {
         const errorBody = await response.text();
+        console.error(`[PowmAPI] Failed to claim challenge - HTTP ${response.status}: ${errorBody}`);
         throw new PowmApiError(
-            `Failed to claim challenge: ${response.statusText}`,
+            `Failed to claim challenge (HTTP ${response.status})`,
             response.status,
             errorBody
         );
@@ -131,8 +134,9 @@ export async function acceptIdentityChallenge(
 
     if (!response.ok) {
         const errorBody = await response.text();
+        console.error(`[PowmAPI] Failed to accept challenge - HTTP ${response.status}: ${errorBody}`);
         throw new PowmApiError(
-            `Failed to accept challenge: ${response.statusText}`,
+            `Failed to accept challenge (HTTP ${response.status})`,
             response.status,
             errorBody
         );
@@ -162,8 +166,9 @@ export async function rejectIdentityChallenge(request: {
 
     if (!response.ok) {
         const errorBody = await response.text();
+        console.error(`[PowmAPI] Failed to reject challenge - HTTP ${response.status}: ${errorBody}`);
         throw new PowmApiError(
-            `Failed to reject challenge: ${response.statusText}`,
+            `Failed to reject challenge (HTTP ${response.status})`,
             response.status,
             errorBody
         );
@@ -210,8 +215,9 @@ export async function testOnboardWallet(request: {
 
     if (!response.ok) {
         const errorBody = await response.text();
+        console.error(`[PowmAPI] Failed to onboard wallet - HTTP ${response.status}: ${errorBody}`);
         throw new PowmApiError(
-            `Failed to onboard wallet: ${response.statusText}`,
+            `Failed to onboard wallet (HTTP ${response.status})`,
             response.status,
             errorBody
         );
