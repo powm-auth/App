@@ -22,6 +22,28 @@ function fetchWithTimeout(url: string, options: RequestInit, timeout: number = R
     ]);
 }
 
+/**
+ * Parse JSON response with UTF-8 BOM handling
+ */
+async function parseJsonResponse(response: Response): Promise<any> {
+    let text = await response.text();
+
+    // Remove UTF-8 BOM if present
+    if (text.charCodeAt(0) === 0xFEFF) {
+        text = text.slice(1);
+    }
+
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        throw new PowmApiError(
+            `Invalid JSON response from server: ${text.substring(0, 200)}`,
+            response.status,
+            text
+        );
+    }
+}
+
 export class PowmApiError extends Error {
     constructor(
         message: string,
@@ -67,11 +89,6 @@ export async function getIdentityChallenge(
 export async function claimIdentityChallenge(
     request: ClaimChallengeRequest
 ): Promise<ClaimChallengeResponse> {
-    console.log('Claiming challenge:', {
-        url: `${POWM_API_BASE}/identity-challenges/claim`,
-        request
-    });
-
     const response = await fetchWithTimeout(
         `${POWM_API_BASE}/identity-challenges/claim`,
         {
@@ -85,39 +102,14 @@ export async function claimIdentityChallenge(
 
     if (!response.ok) {
         const errorBody = await response.text();
-        console.error('Claim failed:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorBody,
-            url: `${POWM_API_BASE}/identity-challenges/claim`
-        });
         throw new PowmApiError(
-            `Failed to claim challenge: ${response.statusText} - ${errorBody}`,
+            `Failed to claim challenge: ${response.statusText}`,
             response.status,
             errorBody
         );
     }
 
-    let responseText = await response.text();
-
-    // Remove UTF-8 BOM if present
-    if (responseText.charCodeAt(0) === 0xFEFF) {
-        responseText = responseText.slice(1);
-    }
-
-    console.log('Claim response:', responseText);
-
-    try {
-        return JSON.parse(responseText);
-    } catch (e) {
-        console.error('Failed to parse claim response:', e);
-        console.error('Response text:', responseText);
-        throw new PowmApiError(
-            `Invalid JSON response from server: ${responseText.substring(0, 200)}`,
-            response.status,
-            responseText
-        );
-    }
+    return parseJsonResponse(response);
 }
 
 /**
@@ -126,11 +118,6 @@ export async function claimIdentityChallenge(
 export async function acceptIdentityChallenge(
     request: AcceptChallengeRequest
 ): Promise<any> {
-    console.log('Accepting challenge:', {
-        url: `${POWM_API_BASE}/identity-challenges/accept`,
-        request
-    });
-
     const response = await fetch(
         `${POWM_API_BASE}/identity-challenges/accept`,
         {
@@ -144,38 +131,14 @@ export async function acceptIdentityChallenge(
 
     if (!response.ok) {
         const errorBody = await response.text();
-        console.error('Accept failed:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorBody,
-            url: `${POWM_API_BASE}/identity-challenges/accept`
-        });
         throw new PowmApiError(
-            `Failed to accept challenge: ${response.statusText} - ${errorBody}`,
+            `Failed to accept challenge: ${response.statusText}`,
             response.status,
             errorBody
         );
     }
 
-    let responseText = await response.text();
-
-    // Remove UTF-8 BOM if present
-    if (responseText.charCodeAt(0) === 0xFEFF) {
-        responseText = responseText.slice(1);
-    }
-
-    console.log('Accept response:', responseText);
-
-    try {
-        return JSON.parse(responseText);
-    } catch (e) {
-        console.error('Failed to parse accept response:', e);
-        throw new PowmApiError(
-            `Invalid JSON response from server: ${responseText.substring(0, 200)}`,
-            response.status,
-            responseText
-        );
-    }
+    return parseJsonResponse(response);
 }
 
 /**
@@ -200,27 +163,59 @@ export async function rejectIdentityChallenge(request: {
     if (!response.ok) {
         const errorBody = await response.text();
         throw new PowmApiError(
-            `Failed to reject challenge: ${response.statusText} - ${errorBody}`,
+            `Failed to reject challenge: ${response.statusText}`,
             response.status,
             errorBody
         );
     }
 
-    let responseText = await response.text();
+    return parseJsonResponse(response);
+}
 
-    // Remove UTF-8 BOM if present
-    if (responseText.charCodeAt(0) === 0xFEFF) {
-        responseText = responseText.slice(1);
-    }
+/**
+ * Submit onboarding data to create a new wallet on the server
+ */
+export async function testOnboardWallet(request: {
+    first_name: string;
+    middle_names?: string;
+    last_name: string;
+    date_of_birth: string;
+    birth_country: string;
+    gender: string;
+    nationality_1: string;
+    nationality_2?: string;
+    nationality_3?: string;
+    signing_scheme: string;
+    signing_public_key: Uint8Array;
+}): Promise<{
+    wallet_id: string;
+    identity_attributes: Record<string, { value: string; salt: string }>;
+    identity_attribute_hashing_scheme: string;
+}> {
+    const requestBody = {
+        ...request,
+        signing_public_key: Buffer.from(request.signing_public_key).toString('base64'), // Convert to base64 string
+    };
 
-    try {
-        return JSON.parse(responseText);
-    } catch (e) {
-        console.error('Failed to parse reject response:', e);
+    const response = await fetchWithTimeout(
+        `${POWM_API_BASE}/test/onboard`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        }
+    );
+
+    if (!response.ok) {
+        const errorBody = await response.text();
         throw new PowmApiError(
-            `Invalid JSON response from server: ${responseText.substring(0, 200)}`,
+            `Failed to onboard wallet: ${response.statusText}`,
             response.status,
-            responseText
+            errorBody
         );
     }
+
+    return parseJsonResponse(response);
 }

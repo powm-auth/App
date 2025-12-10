@@ -11,7 +11,7 @@ export function normalizeScheme(s: string): string {
 
 /**
  * Convert various key formats to KeyObject
- * @param input - Key in PEM string, DER buffer, or KeyObject format
+ * @param input - Key in PEM string, base64 DER string, DER buffer, or KeyObject format
  * @param isPrivate - Whether this is a private key (true) or public key (false)
  * @returns KeyObject ready for crypto operations
  */
@@ -19,9 +19,23 @@ export function toKeyObject(input: KeyObject | Buffer | string, isPrivate: boole
     if (input instanceof KeyObject) return input;
 
     const isPem = typeof input === 'string' && input.includes('-----BEGIN');
-    const format = isPem ? 'pem' : 'der';
+
+    // If it's a Buffer, use it directly as DER
+    let keyData: Buffer | string = input;
+    let format: 'pem' | 'der' = 'der';
+
+    if (typeof input === 'string') {
+        if (isPem) {
+            keyData = input;
+            format = 'pem';
+        } else {
+            // Assume base64 DER string
+            keyData = Buffer.from(input, 'base64');
+        }
+    }
+
     const type = isPrivate ? 'pkcs8' : 'spki';
 
-    const opts = { key: input, format, type } as any;
+    const opts = { key: keyData, format, type } as any;
     return isPrivate ? crypto.createPrivateKey(opts) : crypto.createPublicKey(opts);
 }

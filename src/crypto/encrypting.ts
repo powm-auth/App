@@ -114,7 +114,12 @@ export function isSchemeSupported(scheme: string): boolean {
     return normalizeScheme(scheme) in CURVE_MAP;
 }
 
-export function generateKeyPair(scheme: string): { privateKey: Buffer; publicKeySpkiDer: Buffer } {
+/**
+ * Generate a key pair for encryption
+ * @param scheme - Encryption scheme (e.g., 'ecdhx25519_hkdfsha256_aes256gcm')
+ * @returns Private key (PKCS8 DER) and public key (SPKI DER) as Buffers
+ */
+export function generateKeyPair(scheme: string): { privateKeyPkcs8Der: Buffer; publicKeySpkiDer: Buffer } {
     const curve = getCurve(scheme);
 
     if (curve === 'x25519') {
@@ -123,7 +128,7 @@ export function generateKeyPair(scheme: string): { privateKey: Buffer; publicKey
             privateKeyEncoding: { type: 'pkcs8', format: 'der' }
         });
         return {
-            privateKey: Buffer.from(privateKey as unknown as Uint8Array),
+            privateKeyPkcs8Der: Buffer.from(privateKey as unknown as Uint8Array),
             publicKeySpkiDer: Buffer.from(publicKey as unknown as Uint8Array),
         };
     }
@@ -131,7 +136,7 @@ export function generateKeyPair(scheme: string): { privateKey: Buffer; publicKey
     const { privateKey, publicKey } = crypto.generateKeyPairSync('ec', { namedCurve: curve });
 
     return {
-        privateKey: (privateKey as any).export({ type: 'pkcs8', format: 'der' }) as Buffer,
+        privateKeyPkcs8Der: (privateKey as any).export({ type: 'pkcs8', format: 'der' }) as Buffer,
         publicKeySpkiDer: (publicKey as any).export({ type: 'spki', format: 'der' }) as Buffer,
     };
 }
