@@ -3,7 +3,7 @@
  * Handles communication with the Powm identity challenge server
  */
 
-import type { AcceptChallengeRequest, ClaimChallengeRequest, ClaimChallengeResponse, IdentityChallenge } from '@/types/powm';
+import type { AcceptChallengeRequest, ClaimChallengeRequest, ClaimChallengeResponse, IdentityChallenge, RejectChallengeRequest } from '@/types/powm';
 
 // Android emulator uses 10.0.2.2 to reach host machine's localhost
 // For iOS simulator use 'localhost', for physical device use computer's IP
@@ -148,14 +148,9 @@ export async function acceptIdentityChallenge(
 /**
  * Reject an identity challenge
  */
-export async function rejectIdentityChallenge(request: {
-    time: string;
-    nonce: string;
-    challenge_id: string;
-    wallet_id: string;
-    identity_hash: string;
-    wallet_signature: string;
-}): Promise<any> {
+export async function rejectIdentityChallenge(
+    request: RejectChallengeRequest
+): Promise<any> {
     const response = await fetchWithTimeout(`${POWM_API_BASE}/identity-challenges/reject`, {
         method: 'POST',
         headers: {

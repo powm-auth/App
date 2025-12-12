@@ -3,14 +3,17 @@
  * Handles wallet operations and challenge processing
  */
 
-import { encrypt, generateKeyPair } from '@/crypto/encrypting';
-import { hash } from '@/crypto/keyed_hashing';
-import { sign } from '@/crypto/signing';
 import { acceptIdentityChallenge, claimIdentityChallenge, rejectIdentityChallenge } from '@/services/powm-api';
 import { loadWallet } from '@/services/wallet-storage';
 import type { ClaimChallengeResponse, Wallet } from '@/types/powm';
+import { verifyIdentityChallengeSignature } from '@powm/sdk-js';
+import { encrypting, keyedHashing, signing } from '@powm/sdk-js/crypto';
 import { Buffer } from 'buffer';
 import * as Crypto from 'expo-crypto';
+
+const { encrypt, generateKeyPair } = encrypting;
+const { sign } = signing;
+const { hash } = keyedHashing;
 
 // Current wallet instance cache
 let currentWallet: Wallet | null = null;
@@ -81,9 +84,8 @@ export async function claimChallenge(
     const signingString = `${time}|${nonce}|${challengeId}|${wallet.id}|`;
 
     // Sign the string using wallet's private key
-    // Convert string to Uint8Array for signing
-    const encoder = new TextEncoder();
-    const dataBytes = encoder.encode(signingString);
+    // Convert string to Buffer for signing
+    const dataBytes = Buffer.from(signingString, 'utf-8');
 
     const signature = sign(
         wallet.signing_algorithm,
@@ -100,6 +102,11 @@ export async function claimChallenge(
         wallet_id: wallet.id,
         wallet_signature: walletSignature,
     });
+
+    // Verify the challenge Powm signature
+    if (!verifyIdentityChallengeSignature(claimResponse.challenge)) {
+        throw new Error('Invalid challenge signature from server');
+    }
 
     return claimResponse;
 }
@@ -163,7 +170,7 @@ export async function acceptChallenge(
     const payloadBytes = new TextEncoder().encode(payloadJson);
 
     const encryptingScheme = claimResponse.challenge.encrypting_scheme;
-    const appPublicKeyB64 = claimResponse.claim.encrypting_application_key;
+    const appPublicKeyB64 = claimResponse.claim.encrypting_requester_key;
 
     // Decode base64 to Buffer (not Uint8Array)
     const appPublicKeyBytes = Uint8Array.from(atob(appPublicKeyB64), c => c.charCodeAt(0));
@@ -235,44 +242,6 @@ export async function rejectChallenge(
     wallet: Wallet,
     claimResponse: ClaimChallengeResponse
 ): Promise<void> {
-    // Compute attribute hashes using wallet's salts and challenge's canonical order
-    const orderedHashes: Uint8Array[] = [];
-
-    const hashingScheme = wallet.identity_attribute_hashing_scheme;
-    const requestedAttrs = claimResponse.challenge.identity_attributes;
-
-    // Use challenge.identity_attributes array order (already sorted by server)
-    for (const attrName of requestedAttrs) {
-        const attrData = wallet.attributes[attrName];
-        if (!attrData) {
-            // Wallet doesn't have this attribute - skip hash computation
-            // The identity hash will only include attributes the wallet has
-            continue;
-        }
-
-        // Decode wallet's salt and compute hash
-        const saltBytes = Uint8Array.from(atob(attrData.salt), c => c.charCodeAt(0));
-        const encoder = new TextEncoder();
-        const valueBytes = encoder.encode(attrData.value);
-
-        const attrHash = hash(hashingScheme, saltBytes as any, valueBytes as any);
-        orderedHashes.push(attrHash as any);
-    }
-
-    // Concatenate hashes in challenge's canonical order
-    const totalLength = orderedHashes.reduce((acc, h) => acc + h.length, 0);
-    const combinedHashes = new Uint8Array(totalLength);
-
-    let offset = 0;
-    for (const attrHash of orderedHashes) {
-        combinedHashes.set(attrHash, offset);
-        offset += attrHash.length;
-    }
-
-    const challengeIdBytes = new TextEncoder().encode(challengeId);
-    const identityHash = hash(hashingScheme, challengeIdBytes as any, combinedHashes as any);
-    const identityHashB64 = btoa(String.fromCharCode(...(identityHash as any)));
-
     // Generate nonce and timestamp for signing
     const randomBytes = Crypto.getRandomBytes(32);
     const requestNonce = btoa(String.fromCharCode(...randomBytes))
@@ -283,8 +252,8 @@ export async function rejectChallenge(
 
     const time = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 
-    // Build signing string for reject: {time}|{nonce}|{challenge_id}|{wallet_id}|{identity_hash}|
-    const signingString = `${time}|${requestNonce}|${challengeId}|${wallet.id}|${identityHashB64}|`;
+    // Build signing string for reject: {time}|{nonce}|{challenge_id}|{wallet_id}|
+    const signingString = `${time}|${requestNonce}|${challengeId}|${wallet.id}|`;
 
     // Sign the string
     const sigBytes = new TextEncoder().encode(signingString);
@@ -297,7 +266,6 @@ export async function rejectChallenge(
         nonce: requestNonce,
         challenge_id: challengeId,
         wallet_id: wallet.id,
-        identity_hash: identityHashB64,
         wallet_signature: signatureB64,
     });
 }

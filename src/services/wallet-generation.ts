@@ -1,7 +1,9 @@
-import { generateKeyPair as generateSigningKeyPair } from '@/crypto/signing';
 import { Wallet } from '@/types/powm';
+import { signing } from '@powm/sdk-js/crypto';
 import { Buffer } from 'buffer';
 import * as Crypto from 'expo-crypto';
+
+const { generateKeyPair: generateSigningKeyPair } = signing;
 
 /**
  * Generate a random wallet ID

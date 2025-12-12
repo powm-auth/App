@@ -1,6 +1,10 @@
+import { IdentityChallenge } from '@powm/sdk-js';
+
 /**
  * Wallet types for Powm identity protocol
  */
+
+export { IdentityChallenge };
 
 export interface Wallet {
     id: string;
@@ -13,18 +17,6 @@ export interface Wallet {
     attributes: Record<string, { value: string; salt: string }>;
 }
 
-export interface IdentityChallenge {
-    id: string;
-    app_id: string;
-    requested_attributes: string[];
-    encrypting_scheme: string;
-    created_at: string;
-    expires_at: string;
-    app_ephemeral_encrypting_public_key?: string;
-    wallet_ephemeral_encrypting_public_key?: string;
-    wallet_id?: string;
-}
-
 export interface ClaimChallengeRequest {
     time: string;
     nonce: string;
@@ -35,18 +27,15 @@ export interface ClaimChallengeRequest {
 
 export interface ClaimChallengeResponse {
     claim: {
-        application_display_name: string;
-        encrypting_application_key: string;
+        requester_type: 'application' | 'wallet';
+        requester_display_name: string | null;
+        encrypting_requester_key: string;
         claimed_at: string;
         reclaimed: boolean;
         wallet_id: string;
+        // ADD SIGNATURE!!!!
     };
-    challenge: {
-        challenge_id: string;
-        encrypting_scheme: string;
-        expires_at: string;
-        identity_attributes: string[]; // Pre-sorted array from server
-    };
+    challenge: IdentityChallenge;
 }
 
 export interface AcceptChallengeRequest {
@@ -59,5 +48,13 @@ export interface AcceptChallengeRequest {
     identity_encrypting_wallet_key: string;
     identity_encrypting_nonce: string;
     identity_encrypted: string;
+    wallet_signature: string;
+}
+
+export interface RejectChallengeRequest {
+    time: string;
+    nonce: string;
+    challenge_id: string;
+    wallet_id: string;
     wallet_signature: string;
 }

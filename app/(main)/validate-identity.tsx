@@ -56,7 +56,8 @@ export default function ValidateIdentityScreen() {
     );
   }
 
-  const appName = claimResponse.claim.application_display_name;
+  const appName = claimResponse.claim.requester_display_name ||
+    (claimResponse.claim.requester_type === 'wallet' ? 'A Wallet' : 'Unknown Requester');
   const requestedAttrs = claimResponse.challenge.identity_attributes;
   const wallet = getCurrentWallet();
   if (!wallet) {

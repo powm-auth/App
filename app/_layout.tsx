@@ -1,12 +1,9 @@
+import '@/polyfills';
 import { powmColors } from '@/theme/powm-tokens';
-import { Buffer } from 'buffer';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-
-// Setup global Buffer polyfill
-global.Buffer = Buffer;
 
 // Global JS error & unhandled promise rejection handlers (diagnostic)
 // This helps capture errors like "Unable to activate keep awake" without crashing the app
