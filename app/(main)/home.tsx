@@ -1,68 +1,23 @@
 import {
     AnimatedEntry,
     BackgroundImage,
+    Button,
     Column,
     GlassCard,
     PowmIcon,
     PowmText,
-    Row,
-    TicketCard,
-    TicketCardIcon
+    Row
 } from '@/components';
 import { Notification, NotificationPanel } from '@/components/NotificationPanel';
 import { ScannerCard } from '@/components/home/ScannerCard';
-import { TicketDetailModal } from '@/components/home/TicketDetailModal';
-import { getCurrentWallet } from '@/services/wallet-service';
+import { createWalletChallenge, getCurrentWallet, pollChallenge } from '@/services/wallet-service';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface TicketData {
-    id: string;
-    title: string;
-    subtitle: string;
-    icon: TicketCardIcon;
-    modalData: {
-        firstname?: string;
-        lastname?: string;
-        age?: string;
-        country?: string;
-    };
-}
-
-const AVAILABLE_TICKETS: TicketData[] = [
-    {
-        id: 'name-ticket',
-        title: 'Name',
-        subtitle: 'First and Lastname Proof',
-        icon: {
-            name: 'powmLogo',
-            backgroundColor: 'rgba(160, 107, 255, 0.15)',
-            color: powmColors.electricMain,
-            size: 48,
-        },
-        modalData: {
-            firstname: 'John',
-            lastname: 'Doe',
-        },
-    },
-    {
-        id: 'age-ticket',
-        title: 'Age',
-        subtitle: 'Over 18 Proof',
-        icon: {
-            name: 'id',
-            backgroundColor: 'rgba(160, 107, 255, 0.15)',
-            color: powmColors.electricMain,
-            size: 32,
-        },
-        modalData: {
-            age: '24',
-        }
-    }
-];
 
 export default function HomeScreen() {
     const insets = useSafeAreaInsets();
@@ -83,28 +38,49 @@ export default function HomeScreen() {
         },
     ]);
 
-    const [showTicketModal, setShowTicketModal] = useState(false);
-    const [currentTicket, setCurrentTicket] = useState<TicketData['modalData'] | null>(null);
-    const [ticketId, setTicketId] = useState('');
-
-    const generateTicketId = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let id = '';
-        for (let i = 0; i < 15; i++) {
-            if (i === 7) id += ' ';
-            else id += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return id;
-    };
-
-    const handleSeeTicket = (ticket: TicketData) => {
-        setCurrentTicket(ticket.modalData);
-        setTicketId(generateTicketId());
-        setShowTicketModal(true);
-    };
+    const [challengeId, setChallengeId] = useState<string | null>(null);
+    const [status, setStatus] = useState<string>('idle'); // idle, creating, polling, accepted, rejected
+    const [identityData, setIdentityData] = useState<any>(null);
 
     const handleMarkAllRead = () => {
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    };
+
+    const handleCreateChallenge = async () => {
+        const wallet = getCurrentWallet();
+        if (!wallet) return;
+
+        setStatus('creating');
+        try {
+            // Request basic attributes
+            const attributes = ['first_name', 'last_name'];
+            const { challengeId, privateKey } = await createWalletChallenge(wallet, attributes);
+
+            setChallengeId(challengeId);
+            setStatus('polling');
+
+            // Start polling
+            try {
+                const identity = await pollChallenge(challengeId, privateKey, (s) => {
+                    if (s === 'accepted') setStatus('accepted');
+                    else if (s === 'rejected') setStatus('rejected');
+                });
+                setIdentityData(identity);
+                setStatus('accepted');
+            } catch (e) {
+                console.error(e);
+                setStatus('rejected');
+            }
+        } catch (e) {
+            console.error(e);
+            setStatus('idle');
+        }
+    };
+
+    const handleReset = () => {
+        setChallengeId(null);
+        setStatus('idle');
+        setIdentityData(null);
     };
 
     return (
@@ -116,13 +92,6 @@ export default function HomeScreen() {
                     onClose={() => setIsNotificationPanelOpen(false)}
                     notifications={notifications}
                     onMarkAllRead={handleMarkAllRead}
-                />
-
-                <TicketDetailModal
-                    visible={showTicketModal}
-                    onClose={() => setShowTicketModal(false)}
-                    ticket={currentTicket}
-                    ticketId={ticketId}
                 />
 
                 <ScrollView
@@ -148,54 +117,70 @@ export default function HomeScreen() {
                         </View>
                     </AnimatedEntry>
 
-                    {/* ID Tickets Section */}
-                    <Column gap={powmSpacing.sm} style={styles.ticketsSection}>
-                        <AnimatedEntry index={1}>
-                            <PowmText variant="subtitle" style={{ marginLeft: 4, marginBottom: 4 }}>
-                                ID Tickets
-                            </PowmText>
-                        </AnimatedEntry>
+                    {/* Wallet-to-Wallet Identity Exchange */}
+                    <AnimatedEntry index={1}>
+                        <Column gap={powmSpacing.md} style={{ alignItems: 'center' }}>
+                            {!challengeId ? (
+                                <Button
+                                    title={status === 'creating' ? "Creating..." : "Request Identity"}
+                                    onPress={handleCreateChallenge}
+                                    disabled={status === 'creating'}
+                                    style={{ width: '100%' }}
+                                />
+                            ) : (
+                                <GlassCard padding={powmSpacing.lg} style={{ alignItems: 'center', width: '100%' }}>
+                                    <PowmText variant="subtitle" align="center" style={{ marginBottom: powmSpacing.md }}>
+                                        Scan to Prove Identity
+                                    </PowmText>
 
-                        {/* 2. Create an ID Ticket */}
-                        <AnimatedEntry index={2}>
-                            <GlassCard onPress={() => {
-                                const { useRouter } = require('expo-router');
-                                useRouter().push('/create-ticket');
-                            }}>
-                                <Row gap={16} align="center">
-                                    <View style={styles.createIconContainer}>
-                                        <PowmIcon name="add" size={48} color={powmColors.orangeElectricMain} />
-                                    </View>
-                                    <Column flex={1} gap={2}>
-                                        <PowmText variant="subtitleSemiBold" style={{ fontSize: 16 }}>
-                                            Create an ID Ticket
-                                        </PowmText>
-                                        <PowmText variant="text" color={powmColors.inactive}>
-                                            Prove your identity to someone
-                                        </PowmText>
-                                    </Column>
-                                </Row>
-                            </GlassCard>
-                        </AnimatedEntry>
-
-                        {/* 3. Ticket List (Grouped in ONE Holder) */}
-                        <AnimatedEntry index={3}>
-                            <GlassCard padding={8}>
-                                <Column gap={8}>
-                                    {AVAILABLE_TICKETS.map((ticket) => (
-                                        <TicketCard
-                                            key={ticket.id}
-                                            icon={ticket.icon}
-                                            title={ticket.title}
-                                            subtitle={ticket.subtitle}
-                                            onPress={() => handleSeeTicket(ticket)}
-                                            style={{ padding: 16, width: '100%' }}
+                                    <View style={{ padding: powmSpacing.md, backgroundColor: 'white', borderRadius: powmRadii.md }}>
+                                        <QRCode
+                                            value={`powm://${challengeId}`}
+                                            size={200}
                                         />
-                                    ))}
-                                </Column>
-                            </GlassCard>
-                        </AnimatedEntry>
-                    </Column>
+                                    </View>
+
+                                    <View style={{ marginTop: powmSpacing.md, width: '100%', alignItems: 'center' }}>
+                                        {status === 'polling' && (
+                                            <Row gap={8} align="center">
+                                                <ActivityIndicator color={powmColors.electricMain} />
+                                                <PowmText variant="text">Waiting for scan...</PowmText>
+                                            </Row>
+                                        )}
+                                        {status === 'accepted' && (
+                                            <Column align="center" gap={4} style={{ width: '100%' }}>
+                                                <PowmIcon name="check" color={powmColors.success} size={32} />
+                                                <PowmText variant="subtitle" color={powmColors.success}>Identity Verified!</PowmText>
+                                                {identityData && (
+                                                    <PowmText variant="text" align="center">
+                                                        {identityData.first_name} {identityData.last_name}
+                                                    </PowmText>
+                                                )}
+                                                <Button
+                                                    title="Reset"
+                                                    variant="secondary"
+                                                    onPress={handleReset}
+                                                    style={{ marginTop: powmSpacing.md, width: '100%' }}
+                                                />
+                                            </Column>
+                                        )}
+                                        {status === 'rejected' && (
+                                            <Column align="center" gap={4} style={{ width: '100%' }}>
+                                                <PowmIcon name="close" color={powmColors.error} size={32} />
+                                                <PowmText variant="subtitle" color={powmColors.error}>Rejected or Failed</PowmText>
+                                                <Button
+                                                    title="Try Again"
+                                                    variant="secondary"
+                                                    onPress={handleReset}
+                                                    style={{ marginTop: powmSpacing.md, width: '100%' }}
+                                                />
+                                            </Column>
+                                        )}
+                                    </View>
+                                </GlassCard>
+                            )}
+                        </Column>
+                    </AnimatedEntry>
 
                     <View style={{ height: 100 }} />
                 </ScrollView>

@@ -6,7 +6,7 @@
 import { acceptIdentityChallenge, claimIdentityChallenge, rejectIdentityChallenge } from '@/services/powm-api';
 import { loadWallet } from '@/services/wallet-storage';
 import type { ClaimChallengeResponse, Wallet } from '@/types/powm';
-import { verifyIdentityChallengeSignature } from '@powm/sdk-js';
+import { createIdentityChallenge, decryptAndVerifyIdentity, decryptIdentityChallengeResponse, verifyIdentityChallengeSignature, waitForCompletedIdentityChallenge } from '@powm/sdk-js';
 import { encrypting, keyedHashing, signing } from '@powm/sdk-js/crypto';
 import { Buffer } from 'buffer';
 import * as Crypto from 'expo-crypto';
@@ -268,4 +268,71 @@ export async function rejectChallenge(
         wallet_id: wallet.id,
         wallet_signature: signatureB64,
     });
+}
+
+/**
+ * Create a wallet-to-wallet identity challenge
+ */
+export async function createWalletChallenge(
+    wallet: Wallet,
+    attributes: string[]
+): Promise<{ challengeId: string; privateKey: Buffer }> {
+    const encryptingScheme = 'ecdhp256_hkdfsha256_aes256gcm';
+    const ephemeralKeys = generateKeyPair(encryptingScheme);
+    const publicKeyB64 = ephemeralKeys.publicKeySpkiDer.toString('base64');
+    const signingPrivateKeyB64 = Buffer.from(wallet.private_key).toString('base64');
+
+    const challenge = await createIdentityChallenge(
+        wallet.id,
+        attributes,
+        encryptingScheme,
+        publicKeyB64,
+        wallet.signing_algorithm,
+        signingPrivateKeyB64
+    );
+
+    return {
+        challengeId: challenge.challenge_id,
+        privateKey: ephemeralKeys.privateKeyPkcs8Der
+    };
+}
+
+/**
+ * Poll for challenge completion and decrypt identity
+ */
+export async function pollChallenge(
+    challengeId: string,
+    privateKey: Buffer,
+    onStatus?: (status: string) => void
+): Promise<any> {
+    try {
+        // Wait for challenge to be completed (SDK handles polling)
+        const completedChallenge = await waitForCompletedIdentityChallenge(
+            challengeId,
+            300000 // 5 minute timeout
+        );
+
+        // Decrypt the challenge response
+        const response = decryptIdentityChallengeResponse(
+            completedChallenge,
+            privateKey.toString('base64')
+        );
+
+        if (onStatus) onStatus(response.status);
+
+        if (response.status === 'accepted') {
+            const acceptance = response.data as any;
+            const identity = await decryptAndVerifyIdentity(
+                completedChallenge,
+                acceptance,
+                privateKey.toString('base64')
+            );
+            return identity;
+        } else if (response.status === 'rejected') {
+            throw new Error('Challenge was rejected');
+        }
+    } catch (e: any) {
+        console.error('Poll challenge error:', e);
+        throw e;
+    }
 }
