@@ -8,9 +8,11 @@ import {
   PowmText,
 } from '@/components';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
+import { deleteWallet } from '@/wallet/storage';
 import { useRouter } from 'expo-router';
 import React, { useRef } from 'react';
 import {
+  Alert,
   PanResponder,
   ScrollView,
   StyleSheet,
@@ -28,11 +30,33 @@ interface MenuItem {
   label: string;
   onPress: () => void;
   iconSize?: number;
+  danger?: boolean;
 }
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const handleResetWallet = () => {
+    Alert.alert(
+      'Reset Wallet',
+      'Are you sure you want to delete your wallet? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteWallet();
+            router.replace('/startup');
+          },
+        },
+      ]
+    );
+  };
 
   const menuSections: MenuSection[] = [
     {
@@ -68,6 +92,12 @@ export default function ProfileScreen() {
           label: 'Help',
           onPress: () => router.push('/help'),
           iconSize: 36,
+        },
+        {
+          icon: 'close',
+          label: 'Reset Wallet',
+          onPress: handleResetWallet,
+          danger: true,
         },
       ],
     },
@@ -132,6 +162,7 @@ export default function ProfileScreen() {
                             title={item.label}
                             icon={item.icon}
                             iconSize={item.iconSize}
+                            iconColor={item.danger ? powmColors.deletionRedHard : undefined}
                             onPress={item.onPress}
                             showChevron
                           />

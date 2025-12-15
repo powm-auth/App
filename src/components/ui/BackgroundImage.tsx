@@ -1,7 +1,9 @@
 import { powmColors } from '@/theme/powm-tokens';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { ImageBackground, StyleSheet, ViewStyle } from 'react-native';
+import { Animated, ImageBackground, ImageSourcePropType, ImageStyle, StyleSheet, ViewStyle } from 'react-native';
+
+const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground);
 
 /**
  * BackgroundImage Component
@@ -18,22 +20,26 @@ import { ImageBackground, StyleSheet, ViewStyle } from 'react-native';
 export interface BackgroundImageProps {
   children: React.ReactNode;
   style?: ViewStyle;
+  imageStyle?: any; // Allow animated values
   gradient?: boolean;
   gradientOpacity?: number;
+  source?: ImageSourcePropType;
 }
 
 export const BackgroundImage: React.FC<BackgroundImageProps> = ({
   children,
   style,
+  imageStyle,
   gradient = true,
-  gradientOpacity = 0.45
+  gradientOpacity = 0.45,
+  source
 }) => {
   return (
-    <ImageBackground
-      source={require('@/assets/powm/illustrations/powm_draw.png')}
+    <AnimatedImageBackground
+      source={source || require('@/assets/powm/illustrations/powm_draw.png')}
       style={[styles.background, style]}
       resizeMode="cover"
-      imageStyle={styles.image}
+      imageStyle={[styles.image, imageStyle]}
     >
       {gradient && (
         <LinearGradient
@@ -43,7 +49,7 @@ export const BackgroundImage: React.FC<BackgroundImageProps> = ({
         />
       )}
       {children}
-    </ImageBackground>
+    </AnimatedImageBackground>
   );
 };
 

@@ -62,8 +62,6 @@ const STEPS = [
         description: 'Your citizenship information',
         fields: [
             { key: 'nationality_1', label: getAttributeDisplayName('nationality_1'), required: true, type: 'country' },
-            { key: 'nationality_2', label: getAttributeDisplayName('nationality_2') + ' (optional)', required: false, type: 'country' },
-            { key: 'nationality_3', label: getAttributeDisplayName('nationality_3') + ' (optional)', required: false, type: 'country' },
         ]
     }
 ];
@@ -84,6 +82,7 @@ export default function OnboardingScreen() {
     const scaleAnim = useRef(new Animated.Value(0.9)).current;
     const stepFadeAnim = useRef(new Animated.Value(1)).current;
     const formEntranceAnim = useRef(new Animated.Value(0)).current;
+    const bgFadeAnim = useRef(new Animated.Value(1)).current;
 
     // Welcome screen individual animations
     const titleFadeAnim = useRef(new Animated.Value(0)).current;
@@ -386,6 +385,7 @@ export default function OnboardingScreen() {
             Animated.timing(subtitleFadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
             Animated.timing(descFadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
             Animated.timing(buttonFadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+            Animated.timing(bgFadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]).start(() => {
             setShowWelcome(false);
 
@@ -652,7 +652,20 @@ export default function OnboardingScreen() {
     // Welcome screen
     if (showWelcome) {
         return (
-            <BackgroundImage>
+            <BackgroundImage
+                source={require('../assets/images/first_screen_bg.png')}
+                gradient={false}
+                imageStyle={{
+                    transform: [],
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: bgFadeAnim
+                }}
+            >
                 <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
                     <View style={styles.welcomeContainer}>
                         <Column style={styles.welcomeContent}>
@@ -663,7 +676,7 @@ export default function OnboardingScreen() {
                                 }}
                             >
                                 <PowmText variant="title" style={styles.welcomeTitle}>
-                                    Welcome to Powm 👋
+                                    Welcome to Powm
                                 </PowmText>
                             </Animated.View>
 
@@ -700,7 +713,7 @@ export default function OnboardingScreen() {
                                     variant="primary"
                                     icon="check"
                                     onPress={handleStartOnboarding}
-                                    style={styles.welcomeButton}
+                                    style={[styles.welcomeButton, styles.glassButtonPrimary]}
                                 />
                             </Animated.View>
                         </Column>
@@ -713,65 +726,22 @@ export default function OnboardingScreen() {
     // Success screen
     if (showSuccess) {
         return (
-            <BackgroundImage>
+            <BackgroundImage
+                source={require('../assets/images/welcome_bg.png')}
+                gradient={false}
+                imageStyle={{
+                    transform: [],
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: '100%',
+                    height: '100%',
+                }}
+            >
                 <View style={[styles.successRoot, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
                     <View style={[styles.welcomeContainer, styles.successContainer]}>
                         <Animated.View style={[styles.successBackground, { opacity: successBgFadeAnim }]} pointerEvents="none">
-                            <Animated.View
-                                style={[
-                                    styles.successOrb,
-                                    {
-                                        transform: [
-                                            {
-                                                translateY: successBgAnim.interpolate({
-                                                    inputRange: [0, 1],
-                                                    outputRange: [0, -18],
-                                                }),
-                                            },
-                                            {
-                                                translateX: successBgAnim.interpolate({
-                                                    inputRange: [0, 1],
-                                                    outputRange: [0, 12],
-                                                }),
-                                            },
-                                            {
-                                                scale: successBgAnim.interpolate({
-                                                    inputRange: [0, 1],
-                                                    outputRange: [1, 1.08],
-                                                }),
-                                            },
-                                        ],
-                                    },
-                                ]}
-                            />
-                            <Animated.View
-                                style={[
-                                    styles.successOrbAlt,
-                                    {
-                                        transform: [
-                                            {
-                                                translateY: successBgAnim.interpolate({
-                                                    inputRange: [0, 1],
-                                                    outputRange: [0, 22],
-                                                }),
-                                            },
-                                            {
-                                                translateX: successBgAnim.interpolate({
-                                                    inputRange: [0, 1],
-                                                    outputRange: [0, -10],
-                                                }),
-                                            },
-                                            {
-                                                scale: successBgAnim.interpolate({
-                                                    inputRange: [0, 1],
-                                                    outputRange: [1, 1.06],
-                                                }),
-                                            },
-                                        ],
-                                    },
-                                ]}
-                            />
-
                             <View style={styles.successBurstLayer}>
                                 {successBurstParticles.map((particle, index) => (
                                     <Animated.View
@@ -799,7 +769,7 @@ export default function OnboardingScreen() {
                         <View style={styles.successContent}>
                             <Animated.View style={{ opacity: successEmojiFadeAnim, transform: [{ translateY: successEmojiSlideAnim }] }}>
                                 <PowmText variant="title" style={styles.successEmoji}>
-                                    🎉
+                                    
                                 </PowmText>
                             </Animated.View>
 
@@ -830,13 +800,13 @@ export default function OnboardingScreen() {
                                             router.replace('/startup');
                                             // TODO: Navigate to identity verification flow
                                         }}
-                                        style={styles.successButtonFull}
+                                        style={[styles.successButtonFull, styles.glassButtonPrimary]}
                                     />
                                     <Button
                                         title="I'll Do This Later"
                                         variant="secondary"
                                         onPress={() => router.replace('/startup')}
-                                        style={styles.successButtonFull}
+                                        style={[styles.successButtonFull, styles.glassButtonSecondary]}
                                     />
                                 </View>
                             </Animated.View>
@@ -1457,6 +1427,16 @@ const styles = StyleSheet.create({
         fontSize: 13,
         opacity: 0.7,
         lineHeight: 18,
+    },
+    glassButtonPrimary: {
+        backgroundColor: 'rgba(65, 32, 125, 0.6)',
+        borderColor: 'rgba(160, 107, 255, 0.5)',
+        borderWidth: 1,
+    },
+    glassButtonSecondary: {
+        backgroundColor: powmColors.glass.background,
+        borderColor: powmColors.glass.border,
+        borderWidth: 1,
     },
     modalContainer: {
         flex: 1,
