@@ -17,7 +17,7 @@ export async function rejectIdentityChallenge(
         .replace(/=/g, '')
         .substring(0, 32);
 
-    const signingString = `${time}|${nonce}|${challengeId}|${walletId}|`;
+    const signingString = `v1/identity-challenges/reject|${time}|${nonce}|${challengeId}|${walletId}|`;
     const walletSignature = await signer(Buffer.from(signingString, 'utf-8'));
 
     const request: RejectChallengeRequest = {

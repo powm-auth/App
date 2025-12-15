@@ -20,7 +20,7 @@ export async function resetAnonymizingKey(
         .replace(/=/g, '')
         .substring(0, 32);
 
-    const signingString = `${time}|${nonce}|${walletId}|`;
+    const signingString = `v1/wallets/reset-anonymizing-key|${time}|${nonce}|${walletId}|`;
     const walletSignature = await signer(Buffer.from(signingString, 'utf-8'));
 
     const request = {

@@ -28,7 +28,7 @@ export async function claimIdentityChallenge(
     const time = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 
     // Build signing string: {time}|{nonce}|{challenge_id}|{wallet_id}|
-    const signingString = `${time}|${nonce}|${challengeId}|${walletId}|`;
+    const signingString = `v1/identity-challenges/claim|${time}|${nonce}|${challengeId}|${walletId}|`;
 
     // Sign the string
     const walletSignature = await signer(Buffer.from(signingString, 'utf-8'));

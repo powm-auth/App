@@ -158,7 +158,7 @@ export async function acceptIdentityChallenge(
     const encryptedNonceB64 = Buffer.from(encrypted.nonce).toString('base64');
     const encryptedCiphertextB64 = Buffer.from(encrypted.ciphertext).toString('base64');
 
-    const signingString = `${time}|${nonce}|${challengeId}|${wallet.id}|${identityHashB64}|${saltsString}|${ephemeralPublicKeyB64}|${encryptedNonceB64}|${encryptedCiphertextB64}|${anonymizingKeyB64 || ''}|`;
+    const signingString = `v1/identity-challenges/accept|${time}|${nonce}|${challengeId}|${wallet.id}|${identityHashB64}|${saltsString}|${ephemeralPublicKeyB64}|${encryptedNonceB64}|${encryptedCiphertextB64}|${anonymizingKeyB64 || ''}|`;
 
     const walletSignature = await signer(Buffer.from(signingString, 'utf-8'));
 

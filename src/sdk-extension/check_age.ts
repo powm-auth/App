@@ -21,7 +21,7 @@ export async function checkAge(
         .replace(/=/g, '')
         .substring(0, 32);
 
-    const signingString = `${time}|${nonce}|${walletId}|${dateOfBirth}|`;
+    const signingString = `v1/wallets/check-age|${time}|${nonce}|${walletId}|${dateOfBirth}|`;
     const walletSignature = await signer(Buffer.from(signingString, 'utf-8'));
 
     const request = {
