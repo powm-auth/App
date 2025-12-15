@@ -4,16 +4,18 @@ import {
   Column,
   GlassCard,
   ListItem,
+  PowmIcon,
   PowmIconName,
   PowmText,
+  Row,
 } from '@/components';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
-import { deleteWallet } from '@/wallet/storage';
+import { loadWallet } from '@/wallet/storage';
 import { useRouter } from 'expo-router';
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   PanResponder,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -30,46 +32,31 @@ interface MenuItem {
   label: string;
   onPress: () => void;
   iconSize?: number;
-  danger?: boolean;
 }
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [identity, setIdentity] = useState<{ first: string; last: string } | null>(null);
 
-  const handleResetWallet = () => {
-    Alert.alert(
-      'Reset Wallet',
-      'Are you sure you want to delete your wallet? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteWallet();
-            router.replace('/startup');
-          },
-        },
-      ]
-    );
-  };
+  useEffect(() => {
+    loadWallet().then((w) => {
+      if (w?.attributes) {
+        setIdentity({
+          first: w.attributes.first_name?.value || 'User',
+          last: w.attributes.last_name?.value || '',
+        });
+      }
+    });
+  }, []);
 
   const menuSections: MenuSection[] = [
     {
-      title: 'Wallet',
+      title: 'Security & Data',
       items: [
         {
-          icon: 'face',
-          label: 'Identity',
-          onPress: () => router.push('/personal-info'),
-        },
-        {
           icon: 'data',
-          label: 'Data',
+          label: 'Wallet Data',
           onPress: () => router.push('/my-data'),
         },
       ],
@@ -92,12 +79,6 @@ export default function ProfileScreen() {
           label: 'Help',
           onPress: () => router.push('/help'),
           iconSize: 36,
-        },
-        {
-          icon: 'close',
-          label: 'Reset Wallet',
-          onPress: handleResetWallet,
-          danger: true,
         },
       ],
     },
@@ -134,6 +115,28 @@ export default function ProfileScreen() {
           </PowmText>
 
           <Column gap={powmSpacing.xl}>
+            {/* Hero Identity Card */}
+            <Pressable onPress={() => router.push('/personal-info')}>
+              <GlassCard style={styles.identityCard}>
+                <Row style={{ alignItems: 'center', gap: powmSpacing.md }}>
+                  <View style={styles.avatarContainer}>
+                    <PowmText variant="title" style={{ fontSize: 24 }}>
+                      {identity?.first?.[0] || '?'}
+                    </PowmText>
+                  </View>
+                  <Column style={{ flex: 1, gap: 2 }}>
+                    <PowmText variant="subtitleSemiBold" style={{ fontSize: 18 }}>
+                      {identity ? `${identity.first} ${identity.last?.[0]}.` : 'Loading...'}
+                    </PowmText>
+                    <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13 }}>
+                      My Digital ID
+                    </PowmText>
+                  </Column>
+                  <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
+                </Row>
+              </GlassCard>
+            </Pressable>
+
             {menuSections.map((section, sectionIndex) => {
               const baseIndex = menuSections.slice(0, sectionIndex).reduce(
                 (acc, s) => acc + s.items.length,
@@ -162,7 +165,6 @@ export default function ProfileScreen() {
                             title={item.label}
                             icon={item.icon}
                             iconSize={item.iconSize}
-                            iconColor={item.danger ? powmColors.deletionRedHard : undefined}
                             onPress={item.onPress}
                             showChevron
                           />
@@ -214,5 +216,19 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
     marginLeft: 76,
+  },
+  identityCard: {
+    padding: powmSpacing.lg,
+    marginBottom: powmSpacing.xs,
+  },
+  avatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
 });

@@ -13,16 +13,26 @@ import {
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { ATTRIBUTE_DEFINITIONS } from '@/utils/constants';
 import { createWalletChallenge, getAttributeDisplayName, getCurrentWallet, pollChallenge, sortAttributeKeys } from '@/wallet/service';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 export default function RequestIdentityScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const wallet = getCurrentWallet();
 
-    const [selectedAttributes, setSelectedAttributes] = useState<string[]>(['first_name', 'last_name']);
+    const [selectedAttributes, setSelectedAttributes] = useState<string[]>(() => {
+        if (params.attributes) {
+            try {
+                return JSON.parse(params.attributes as string);
+            } catch (e) {
+                console.error('Failed to parse attributes param', e);
+            }
+        }
+        return ['first_name', 'last_name'];
+    });
     const [stage, setStage] = useState<'select' | 'generating' | 'polling' | 'completed' | 'error'>('select');
     const [challengeId, setChallengeId] = useState<string | null>(null);
     const [challengeData, setChallengeData] = useState<any>(null);
@@ -86,6 +96,13 @@ export default function RequestIdentityScreen() {
         }
     };
 
+    // Auto-start if requested
+    useEffect(() => {
+        if (params.autoStart === 'true' && stage === 'select') {
+            handleGenerateChallenge();
+        }
+    }, [params.autoStart]);
+
     // Countdown timer effect
     useEffect(() => {
         if (stage !== 'polling' || !challengeData) return;
@@ -127,18 +144,7 @@ export default function RequestIdentityScreen() {
     };
 
     const handleBack = () => {
-        if (stage === 'select') {
-            router.back();
-        } else {
-            Alert.alert(
-                'Cancel Request',
-                'Are you sure you want to cancel this identity request?',
-                [
-                    { text: 'No', style: 'cancel' },
-                    { text: 'Yes', onPress: () => router.back() }
-                ]
-            );
-        }
+        router.back();
     };
 
     return (

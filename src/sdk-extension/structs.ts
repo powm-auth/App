@@ -15,6 +15,9 @@ export interface Wallet {
     identity_attribute_hashing_scheme: string;
     anonymizing_hashing_scheme: string;
     attributes: Record<string, { value: string; salt: string }>;
+    stats: {
+        approved_shares: number;
+    };
 }
 
 export interface ClaimChallengeRequest {
@@ -214,5 +217,17 @@ export class ResetAnonymizingKeyError extends Error {
         this.statusCode = statusCode;
         this.responseBody = responseBody;
         this.cause = cause;
+    }
+}
+
+export class DeleteWalletError extends Error {
+    constructor(
+        public code: string,
+        message: string,
+        public statusCode?: number,
+        public responseBody?: string
+    ) {
+        super(message);
+        this.name = 'DeleteWalletError';
     }
 }

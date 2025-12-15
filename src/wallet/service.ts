@@ -3,6 +3,7 @@
  * Handles wallet operations and challenge processing
  */
 
+import { addHistoryItem } from '@/history/storage';
 import {
     acceptIdentityChallenge,
     checkAge,
@@ -155,6 +156,23 @@ export async function acceptChallenge(
         anonymizer,
         getAnonymizingKey
     );
+
+    // Add to history
+    await addHistoryItem({
+        requester_id: claimResponse.claim.requester_id,
+        requester_type: claimResponse.claim.requester_type,
+        requester_display_name: claimResponse.claim.requester_display_name || undefined,
+        result: 'accepted',
+        attributes_requested: claimResponse.challenge.identity_attributes
+    });
+
+    // Increment approved shares count
+    if (!wallet.stats) {
+        wallet.stats = { approved_shares: 0 };
+    }
+    wallet.stats.approved_shares += 1;
+    wallet.updated_at = new Date();
+    await updateWalletFile(wallet);
 }
 
 /**
@@ -178,6 +196,15 @@ export async function rejectChallenge(
     };
 
     await rejectIdentityChallenge(challengeId, wallet.id, signer);
+
+    // Add to history
+    await addHistoryItem({
+        requester_id: claimResponse.claim.requester_id,
+        requester_type: claimResponse.claim.requester_type,
+        requester_display_name: claimResponse.claim.requester_display_name || undefined,
+        result: 'rejected',
+        attributes_requested: claimResponse.challenge.identity_attributes
+    });
 }
 
 /**

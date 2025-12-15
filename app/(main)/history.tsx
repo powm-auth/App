@@ -5,11 +5,15 @@ import {
   PowmText,
   Row,
 } from '@/components';
+import { HistoryDetailModal } from '@/components/history/HistoryDetailModal';
 import { ActivityItem, HistoryItem } from '@/components/history/HistoryItem';
+import { clearHistory, deleteHistoryItem, loadHistory } from '@/history/storage';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
-import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import React, { useCallback, useRef, useState } from 'react';
 import {
+  Alert,
   LayoutAnimation,
   PanResponder,
   Platform,
@@ -25,21 +29,66 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Mock Data
-const MOCK_ACTIVITY: ActivityItem[] = [
-  { id: '1', name: 'Instagram', time: '18:36', dateLabel: 'Today', type: 'trusted', iconColor: powmColors.activeElectricMain },
-  { id: '2', name: 'Youtube', time: '16:20', dateLabel: 'Today', type: 'trusted', iconColor: '#FF0000' },
-  { id: '5', name: 'Harry H', time: '14:05', dateLabel: 'Today', type: 'anonymous', iconColor: '#B8860B' },
-  { id: '3', name: 'Tabac.fr', time: '09:12', dateLabel: 'Yesterday', type: 'trusted', iconColor: powmColors.orangeElectricMain },
-  { id: '4', name: 'Pornhub', time: '23:45', dateLabel: 'Yesterday', type: 'trusted', iconColor: powmColors.activeElectricMain },
-  { id: '7', name: 'TikTok', time: '20:30', dateLabel: 'Aug 15', type: 'trusted', iconColor: '#000000' },
+const AVATAR_COLORS = [
+  powmColors.electricMain,
+  powmColors.orangeElectricMain,
+  powmColors.successGreen,
+  '#9B51E0', // Purple
+  '#EB5757', // Red/Pink
+  '#2D9CDB', // Light Blue
+  '#F2994A', // Orange
+  '#219653', // Green
 ];
 
+const getAvatarColor = (id: string) => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[index];
+};
+
 export default function HistoryScreen() {
-  const [activities, setActivities] = useState<ActivityItem[]>(MOCK_ACTIVITY);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [selectedItem, setSelectedItem] = useState<ActivityItem | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchHistory = async () => {
+        const history = await loadHistory();
+        const formattedHistory: ActivityItem[] = history.map(item => {
+          const date = new Date(item.timestamp);
+          const today = new Date();
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+
+          let dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          if (date.toDateString() === today.toDateString()) {
+            dateLabel = 'Today';
+          } else if (date.toDateString() === yesterday.toDateString()) {
+            dateLabel = 'Yesterday';
+          }
+
+          return {
+            id: item.id,
+            name: item.requester_display_name || (item.requester_type === 'wallet' ? 'Private Wallet' : 'Unknown App'),
+            time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            dateLabel,
+            type: item.requester_type === 'wallet' ? 'anonymous' : 'trusted',
+            iconColor: getAvatarColor(item.requester_id),
+            result: item.result,
+            attributes_requested: item.attributes_requested
+          };
+        });
+        setActivities(formattedHistory);
+      };
+      fetchHistory();
+    }, [])
+  );
 
   // Group activities
   const groupedActivities = activities.reduce((acc, item) => {
@@ -53,15 +102,55 @@ export default function HistoryScreen() {
     setIsEditing(!isEditing);
   };
 
-  const handleDeleteItem = (id: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
-    setActivities(prev => prev.filter(i => i.id !== id));
+  const handleDeleteItem = async (id: string) => {
+    const hasAcknowledged = await SecureStore.getItemAsync('powm_history_delete_warning_ack');
+
+    const performDelete = async () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+      await deleteHistoryItem(id);
+      setActivities(prev => prev.filter(i => i.id !== id));
+      setSelectedItem(null);
+    };
+
+    if (!hasAcknowledged) {
+      Alert.alert(
+        'Delete History Item',
+        'This action cannot be undone because your history is stored locally on your device.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              await SecureStore.setItemAsync('powm_history_delete_warning_ack', 'true');
+              await performDelete();
+            }
+          }
+        ]
+      );
+    } else {
+      await performDelete();
+    }
   };
 
-  const handleClearAll = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
-    setActivities([]);
-    setIsEditing(false);
+  const handleClearAll = async () => {
+    Alert.alert(
+      'Clear All History',
+      'Are you sure you want to delete all history? This cannot be undone as data is stored locally.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete All',
+          style: 'destructive',
+          onPress: async () => {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+            await clearHistory();
+            setActivities([]);
+            setIsEditing(false);
+          }
+        }
+      ]
+    );
   };
 
   // Swipe Back Gesture
@@ -147,6 +236,7 @@ export default function HistoryScreen() {
                         item={item}
                         isEditing={isEditing}
                         onDelete={handleDeleteItem}
+                        onPress={setSelectedItem}
                         isLast={index === items.length - 1}
                       />
                     ))}
@@ -158,6 +248,13 @@ export default function HistoryScreen() {
 
           <View style={{ height: 100 }} />
         </ScrollView>
+
+        <HistoryDetailModal
+          visible={!!selectedItem}
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onDelete={handleDeleteItem}
+        />
       </View>
     </BackgroundImage>
   );

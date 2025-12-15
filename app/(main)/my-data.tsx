@@ -10,12 +10,16 @@ import {
   Row,
   ScreenHeader,
 } from '@/components';
+import { deleteWalletFromServer } from '@/sdk-extension';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { ANONYMOUS_ID_INFO_MESSAGE, ANONYMOUS_ID_INFO_TITLE } from '@/utils/constants';
-import { deleteWallet, rotateAnonymizingKey } from '@/wallet/storage';
+import { getCurrentWallet } from '@/wallet/service';
+import { deleteWallet, rotateAnonymizingKey, withSigningKey } from '@/wallet/storage';
+import { signing } from '@powm/sdk-js/crypto';
+import { Buffer } from 'buffer';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -31,16 +35,16 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const StatCard = ({ label, value, icon, index }: { label: string; value: string; icon: PowmIconName; index: number }) => {
+const StatCard = ({ label, value, icon, index, iconSize = 20 }: { label: string; value: string; icon: PowmIconName; index: number; iconSize?: number }) => {
   return (
     <AnimatedEntry index={index} slideDistance={20} style={{ flex: 1 }}>
-      <GlassCard style={styles.statCard}>
+      <GlassCard style={[styles.statCard, { alignItems: 'center' }]}>
         <View style={styles.statIcon}>
-          <PowmIcon name={icon} size={20} color={powmColors.electricMain} />
+          <PowmIcon name={icon} size={iconSize} color={powmColors.electricMain} />
         </View>
-        <Column>
-          <PowmText variant="subtitleSemiBold" style={{ fontSize: 20 }}>{value}</PowmText>
-          <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>{label}</PowmText>
+        <Column align="center">
+          <PowmText variant="subtitleSemiBold" style={{ fontSize: 20 }} align="center">{value}</PowmText>
+          <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }} align="center">{label}</PowmText>
         </Column>
       </GlassCard>
     </AnimatedEntry>
@@ -51,6 +55,33 @@ export default function MyDataScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [isBackupLoading, setIsBackupLoading] = useState(false);
+  const [walletStats, setWalletStats] = useState<{ id: string; created: string; attributeCount: number; approvedShares: number } | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchWallet = async () => {
+        // Use getCurrentWallet first for speed, then load from storage if needed
+        let wallet = getCurrentWallet();
+        if (!wallet) {
+          // Import dynamically to avoid circular dependencies if any, or just use the imported one
+          const { loadWallet } = require('@/wallet/storage');
+          wallet = await loadWallet();
+        }
+
+        if (wallet) {
+          const date = new Date(wallet.created_at);
+          const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          setWalletStats({
+            id: wallet.id,
+            created: formattedDate,
+            attributeCount: Object.keys(wallet.attributes).length,
+            approvedShares: wallet.stats?.approved_shares || 0
+          });
+        }
+      };
+      fetchWallet();
+    }, [])
+  );
 
   const handleBackup = () => {
     setIsBackupLoading(true);
@@ -63,22 +94,73 @@ export default function MyDataScreen() {
   const handleDeleteAll = () => {
     Alert.alert(
       "Delete Everything?",
-      "This action is irreversible. All your documents, history, and keys will be wiped from this device.",
+      "This action is irreversible. Your entire wallet, including all identity data and history, will be permanently erased from this device and the server.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
-          onPress: async () => {
-            try {
-              // TODO: Deregister wallet from server before deleting local data
-              await deleteWallet();
-              console.log("All wallet data deleted");
-              router.replace('/startup');
-            } catch (error) {
-              console.error('Failed to delete wallet:', error);
-              Alert.alert('Error', 'Failed to delete wallet data');
-            }
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              "Are You Absolutely Sure?",
+              "This cannot be undone. Your wallet will be permanently deleted from both this device and our servers.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Yes, Delete Everything",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      // Get wallet info before deleting
+                      const wallet = getCurrentWallet();
+                      if (!wallet) {
+                        throw new Error('No wallet found');
+                      }
+
+                      // Create signer function
+                      const signer = async (data: Uint8Array) => {
+                        return await withSigningKey((privateKey) => {
+                          const signature = signing.sign(
+                            wallet.signing_algorithm,
+                            privateKey,
+                            data as any
+                          );
+                          return Buffer.from(signature).toString('base64');
+                        });
+                      };
+
+                      // Delete from server first
+                      try {
+                        await deleteWalletFromServer(wallet.id, signer);
+                      } catch (error) {
+                        console.warn('Failed to delete wallet from server (ignoring):', error);
+                      }
+
+                      // Then delete local data
+                      await deleteWallet();
+                      console.log("All wallet data deleted");
+
+                      // Show success message
+                      Alert.alert(
+                        "Everything Erased",
+                        "Your wallet has been completely removed from this device and our servers.",
+                        [
+                          {
+                            text: "OK",
+                            onPress: () => router.replace('/startup')
+                          }
+                        ],
+                        { cancelable: false }
+                      );
+                    } catch (error) {
+                      console.error('Failed to delete wallet:', error);
+                      Alert.alert('Error', 'Failed to delete wallet data. Please try again.');
+                    }
+                  }
+                }
+              ]
+            );
           }
         }
       ]
@@ -137,13 +219,22 @@ export default function MyDataScreen() {
             { paddingTop: insets.top + powmSpacing.lg, paddingBottom: insets.bottom + powmSpacing.xl },
           ]}
         >
-          <ScreenHeader title="My Data" />
+          <ScreenHeader title="Wallet Data" />
 
           {/* Dashboard Stats */}
           <Row gap={12} style={styles.statsContainer}>
-            <StatCard label="Documents" value="3" icon="id" index={0} />
-            <StatCard label="Validations" value="12" icon="check" index={1} />
-            <StatCard label="Trust Score" value="High" icon="verified" index={2} />
+            <StatCard
+              label="Wallet Created"
+              value={walletStats?.created || '...'}
+              icon="clock"
+              index={0}
+            />
+            <StatCard
+              label="Approved Shares"
+              value={walletStats ? walletStats.approvedShares.toString() : '...'}
+              icon="check"
+              index={1}
+            />
           </Row>
 
           <View style={styles.sectionSpacer} />

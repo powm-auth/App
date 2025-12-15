@@ -24,6 +24,8 @@ export async function onboardWallet(request: {
     const requestBody = {
         ...request,
         signing_public_key: Buffer.from(request.signing_public_key).toString('base64'), // Convert to base64 string
+        time: new Date().toISOString(),
+        nonce: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
     };
 
     const response = await fetchWithTimeout(

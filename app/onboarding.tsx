@@ -14,7 +14,6 @@ import { signing } from '@powm/sdk-js/crypto';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { Buffer } from 'buffer';
-import * as Localization from 'expo-localization';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionSheetIOS, Alert, Animated, Dimensions, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -83,6 +82,7 @@ export default function OnboardingScreen() {
     const stepFadeAnim = useRef(new Animated.Value(1)).current;
     const formEntranceAnim = useRef(new Animated.Value(0)).current;
     const bgFadeAnim = useRef(new Animated.Value(1)).current;
+    const mainBgFadeAnim = useRef(new Animated.Value(0)).current;
 
     // Welcome screen individual animations
     const titleFadeAnim = useRef(new Animated.Value(0)).current;
@@ -167,11 +167,16 @@ export default function OnboardingScreen() {
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
-        // Autofill nationality based on device region
-        const deviceRegion = Localization.getLocales()[0]?.regionCode;
-        if (deviceRegion && !identityData.nationality_1) {
-            setIdentityData(prev => ({ ...prev, nationality_1: deviceRegion }));
-        }
+        // Auto-fill removed - requires native rebuild for expo-localization
+    }, []);
+
+    useEffect(() => {
+        // Fade in background on mount
+        Animated.timing(mainBgFadeAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+        }).start();
     }, []);
 
     useEffect(() => {
@@ -249,134 +254,144 @@ export default function OnboardingScreen() {
         successBgAnim.setValue(0);
         successBgFadeAnim.setValue(0);
 
-        Animated.timing(successBgFadeAnim, {
+        // Fade in background first
+        Animated.timing(mainBgFadeAnim, {
             toValue: 1,
-            duration: 220,
+            duration: 1000,
             useNativeDriver: true,
-        }).start();
-
-        // One-time celebratory burst (fireworks/confetti) as the page loads
-        const { width, height } = Dimensions.get('window');
-        const origins = [
-            { x: width * 0.28, y: height * 0.38 },
-            { x: width * 0.72, y: height * 0.32 },
-        ];
-
-        const burstAnims: Animated.CompositeAnimation[] = [];
-        for (let i = 0; i < successBurstParticles.length; i++) {
-            const particle = successBurstParticles[i];
-
-            const originIndex = i % origins.length;
-            const localCount = Math.ceil(successBurstParticles.length / origins.length);
-            const localIndex = Math.floor(i / origins.length);
-            const origin = origins[originIndex];
-
-            const originX = typeof origin?.x === 'number' ? origin.x : width * 0.5;
-            const originY = typeof origin?.y === 'number' ? origin.y : height * 0.4;
-            const startScale = typeof (particle as any).startScale === 'number' ? (particle as any).startScale : 0.6;
-
-            particle.translateX.setValue(originX);
-            particle.translateY.setValue(originY);
-            particle.scale.setValue(startScale);
-            particle.opacity.setValue(0);
-
-            const baseAngle = (Math.PI * 2 * localIndex) / localCount;
-            const angle = baseAngle + particle.angleJitter;
-
-            const distanceBase = 110 + (localIndex % 5) * 16;
-            const distance = distanceBase * particle.distanceFactor;
-
-            const dx = originX + Math.cos(angle) * distance;
-            const dy = originY + Math.sin(angle) * distance;
-
-            // Make one side pop slightly after the other.
-            const originDelayMs = originIndex * 220;
-            const delayJitterMs = typeof (particle as any).delayJitterMs === 'number' ? (particle as any).delayJitterMs : 0;
-            const delay = originDelayMs + localIndex * 10 + delayJitterMs;
-
-            const fadeInMs = typeof (particle as any).fadeInMs === 'number' ? (particle as any).fadeInMs : 70;
-            const travelMs = typeof (particle as any).travelDurationMs === 'number' ? (particle as any).travelDurationMs : 950;
-            const travelTailMs = Math.max(120, travelMs - fadeInMs);
-
-            burstAnims.push(
-                Animated.sequence([
-                    Animated.delay(delay),
-                    Animated.parallel([
-                        // Travel starts immediately
-                        Animated.timing(particle.translateX, {
-                            toValue: dx,
-                            duration: travelMs,
-                            easing: Easing.out(Easing.quad),
-                            useNativeDriver: true,
-                        }),
-                        Animated.timing(particle.translateY, {
-                            toValue: dy,
-                            duration: travelMs,
-                            easing: Easing.out(Easing.quad),
-                            useNativeDriver: true,
-                        }),
-                        // Opacity: quick in, then fade out
-                        Animated.sequence([
-                            Animated.timing(particle.opacity, { toValue: 1, duration: fadeInMs, useNativeDriver: true }),
-                            Animated.timing(particle.opacity, { toValue: 0, duration: travelTailMs, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-                        ]),
-                        // Scale: quick in, then grow as it moves away
-                        Animated.sequence([
-                            Animated.timing(particle.scale, { toValue: 1, duration: fadeInMs, useNativeDriver: true }),
-                            Animated.timing(particle.scale, { toValue: particle.endScale, duration: travelTailMs, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-                        ]),
-                    ]),
-                ])
-            );
-        }
-        Animated.parallel(burstAnims).start();
-
-        // Cheerful, subtle background motion
-        successBgLoopRef.current?.stop();
-        const loop = Animated.loop(
-            Animated.sequence([
-                Animated.timing(successBgAnim, {
+        }).start(() => {
+            // Wait 1 extra second before showing content
+            setTimeout(() => {
+                Animated.timing(successBgFadeAnim, {
                     toValue: 1,
-                    duration: 6000,
+                    duration: 220,
                     useNativeDriver: true,
-                }),
-                Animated.timing(successBgAnim, {
-                    toValue: 0,
-                    duration: 6000,
-                    useNativeDriver: true,
-                }),
-            ])
-        );
-        successBgLoopRef.current = loop;
-        loop.start();
+                }).start();
 
-        // Staggered entrance like the initial welcome screen
-        Animated.stagger(350, [
-            Animated.parallel([
-                Animated.timing(successEmojiFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-                Animated.spring(successEmojiSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
-            ]),
-            Animated.parallel([
-                Animated.timing(successTitleFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-                Animated.spring(successTitleSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
-            ]),
-            Animated.parallel([
-                Animated.timing(successMessageFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-                Animated.spring(successMessageSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
-            ]),
-            Animated.parallel([
-                Animated.timing(successSubFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-                Animated.spring(successSubSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
-            ]),
-            Animated.parallel([
-                Animated.timing(successButtonsFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-                Animated.spring(successButtonsSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
-            ]),
-        ]).start();
+                // One-time celebratory burst (fireworks/confetti) as the page loads
+                const { width, height } = Dimensions.get('window');
+                const origins = [
+                    { x: width * 0.28, y: height * 0.38 },
+                    { x: width * 0.72, y: height * 0.32 },
+                ];
 
-        return () => {
-            loop.stop();
-        };
+                const burstAnims: Animated.CompositeAnimation[] = [];
+                for (let i = 0; i < successBurstParticles.length; i++) {
+                    const particle = successBurstParticles[i];
+
+                    const originIndex = i % origins.length;
+                    const localCount = Math.ceil(successBurstParticles.length / origins.length);
+                    const localIndex = Math.floor(i / origins.length);
+                    const origin = origins[originIndex];
+
+                    const originX = typeof origin?.x === 'number' ? origin.x : width * 0.5;
+                    const originY = typeof origin?.y === 'number' ? origin.y : height * 0.4;
+                    const startScale = typeof (particle as any).startScale === 'number' ? (particle as any).startScale : 0.6;
+
+                    particle.translateX.setValue(originX);
+                    particle.translateY.setValue(originY);
+                    particle.scale.setValue(startScale);
+                    particle.opacity.setValue(0);
+
+                    const baseAngle = (Math.PI * 2 * localIndex) / localCount;
+                    const angle = baseAngle + particle.angleJitter;
+
+                    const distanceBase = 110 + (localIndex % 5) * 16;
+                    const distance = distanceBase * particle.distanceFactor;
+
+                    const dx = originX + Math.cos(angle) * distance;
+                    const dy = originY + Math.sin(angle) * distance;
+
+                    // Make one side pop slightly after the other.
+                    const originDelayMs = originIndex * 220;
+                    const delayJitterMs = typeof (particle as any).delayJitterMs === 'number' ? (particle as any).delayJitterMs : 0;
+                    const delay = originDelayMs + localIndex * 10 + delayJitterMs;
+
+                    const fadeInMs = typeof (particle as any).fadeInMs === 'number' ? (particle as any).fadeInMs : 70;
+                    const travelMs = typeof (particle as any).travelDurationMs === 'number' ? (particle as any).travelDurationMs : 950;
+                    const travelTailMs = Math.max(120, travelMs - fadeInMs);
+
+                    burstAnims.push(
+                        Animated.sequence([
+                            Animated.delay(delay),
+                            Animated.parallel([
+                                // Travel starts immediately
+                                Animated.timing(particle.translateX, {
+                                    toValue: dx,
+                                    duration: travelMs,
+                                    easing: Easing.out(Easing.quad),
+                                    useNativeDriver: true,
+                                }),
+                                Animated.timing(particle.translateY, {
+                                    toValue: dy,
+                                    duration: travelMs,
+                                    easing: Easing.out(Easing.quad),
+                                    useNativeDriver: true,
+                                }),
+                                // Opacity: quick in, then fade out
+                                Animated.sequence([
+                                    Animated.timing(particle.opacity, { toValue: 1, duration: fadeInMs, useNativeDriver: true }),
+                                    Animated.timing(particle.opacity, { toValue: 0, duration: travelTailMs, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+                                ]),
+                                // Scale: quick in, then grow as it moves away
+                                Animated.sequence([
+                                    Animated.timing(particle.scale, { toValue: 1, duration: fadeInMs, useNativeDriver: true }),
+                                    Animated.timing(particle.scale, { toValue: particle.endScale, duration: travelTailMs, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+                                ]),
+                            ]),
+                        ])
+                    );
+                }
+                Animated.parallel(burstAnims).start();
+
+                // Cheerful, subtle background motion
+                successBgLoopRef.current?.stop();
+                const loop = Animated.loop(
+                    Animated.sequence([
+                        Animated.timing(successBgAnim, {
+                            toValue: 1,
+                            duration: 6000,
+                            useNativeDriver: true,
+                        }),
+                        Animated.timing(successBgAnim, {
+                            toValue: 0,
+                            duration: 6000,
+                            useNativeDriver: true,
+                        }),
+                    ])
+                );
+                successBgLoopRef.current = loop;
+                loop.start();
+
+                // Staggered entrance like the initial welcome screen
+                Animated.stagger(350, [
+                    Animated.parallel([
+                        Animated.timing(successEmojiFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+                        Animated.spring(successEmojiSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
+                    ]),
+                    Animated.parallel([
+                        Animated.timing(successTitleFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+                        Animated.spring(successTitleSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
+                    ]),
+                    Animated.parallel([
+                        Animated.timing(successMessageFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+                        Animated.spring(successMessageSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
+                    ]),
+                    Animated.parallel([
+                        Animated.timing(successSubFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+                        Animated.spring(successSubSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
+                    ]),
+                    Animated.parallel([
+                        Animated.timing(successButtonsFadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+                        Animated.spring(successButtonsSlideAnim, { toValue: 0, tension: 15, friction: 9, useNativeDriver: true }),
+                    ]),
+                ]).start();
+
+                return () => {
+                    loop.stop();
+                };
+            });
+        });
     }, [showSuccess]);
 
     const handleStartOnboarding = () => {
@@ -386,15 +401,23 @@ export default function OnboardingScreen() {
             Animated.timing(descFadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
             Animated.timing(buttonFadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
             Animated.timing(bgFadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+            Animated.timing(mainBgFadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]).start(() => {
             setShowWelcome(false);
 
-            // Animate in the onboarding form
-            Animated.timing(formEntranceAnim, {
-                toValue: 1,
-                duration: 600,
-                useNativeDriver: true,
-            }).start();
+            // Fade background back in and animate in the onboarding form
+            Animated.parallel([
+                Animated.timing(mainBgFadeAnim, {
+                    toValue: 1,
+                    duration: 400,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(formEntranceAnim, {
+                    toValue: 1,
+                    duration: 600,
+                    useNativeDriver: true,
+                }),
+            ]).start();
         });
     };
 
@@ -613,12 +636,13 @@ export default function OnboardingScreen() {
             const wallet: Wallet = {
                 id: serverResponse.wallet_id,
                 public_key: publicKey,
-                created_at: new Date(),
+                created_at: new Date(), // this is ok because timestamp is passed in request, so server approves it 
                 updated_at: null,
                 signing_algorithm: 'EcdsaP256_Sha256',
                 identity_attribute_hashing_scheme: serverResponse.identity_attribute_hashing_scheme,
                 anonymizing_hashing_scheme: serverResponse.anonymizing_hashing_scheme,
                 attributes: serverResponse.identity_attributes,
+                stats: { approved_shares: 0 },
             };
 
             // Decode anonymizing key from server
@@ -634,11 +658,18 @@ export default function OnboardingScreen() {
 
             // Show success screen
             setIsSubmitting(false);
-            Animated.timing(stepFadeAnim, {
-                toValue: 0,
-                duration: 200,
-                useNativeDriver: true,
-            }).start(() => {
+            Animated.parallel([
+                Animated.timing(stepFadeAnim, {
+                    toValue: 0,
+                    duration: 200,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(mainBgFadeAnim, {
+                    toValue: 0,
+                    duration: 200,
+                    useNativeDriver: true,
+                }),
+            ]).start(() => {
                 setShowSuccess(true);
             });
         } catch (error) {
@@ -652,457 +683,464 @@ export default function OnboardingScreen() {
     // Welcome screen
     if (showWelcome) {
         return (
-            <BackgroundImage
-                source={require('../assets/images/first_screen_bg.png')}
-                gradient={false}
-                imageStyle={{
-                    transform: [],
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    width: '100%',
-                    height: '100%',
-                    opacity: bgFadeAnim
-                }}
-            >
-                <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-                    <View style={styles.welcomeContainer}>
-                        <Column style={styles.welcomeContent}>
-                            <Animated.View
-                                style={{
-                                    opacity: titleFadeAnim,
-                                    transform: [{ translateY: titleSlideAnim }],
-                                }}
-                            >
-                                <PowmText variant="title" style={styles.welcomeTitle}>
-                                    Welcome to Powm
-                                </PowmText>
-                            </Animated.View>
+            <Animated.View style={{ flex: 1, opacity: mainBgFadeAnim }}>
+                <BackgroundImage
+                    source={require('../assets/images/first_screen_bg.png')}
+                    gradient={false}
+                    imageStyle={{
+                        transform: [],
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '100%',
+                        height: '100%',
+                        opacity: bgFadeAnim
+                    }}
+                >
+                    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+                        <View style={styles.welcomeContainer}>
+                            <Column style={styles.welcomeContent}>
+                                <Animated.View
+                                    style={{
+                                        opacity: titleFadeAnim,
+                                        transform: [{ translateY: titleSlideAnim }],
+                                    }}
+                                >
+                                    <PowmText variant="title" style={[styles.welcomeTitle, { fontSize: 40 }]}>
+                                        Welcome to <PowmText variant="title" style={{ fontSize: 40, color: powmColors.electricMain }}>Powm</PowmText>!
+                                    </PowmText>
+                                </Animated.View>
 
-                            <Animated.View
-                                style={{
-                                    opacity: subtitleFadeAnim,
-                                    transform: [{ translateY: subtitleSlideAnim }],
-                                }}
-                            >
-                                <PowmText variant="text" style={styles.welcomeSubtitle}>
-                                    Your Digital Identity Wallet
-                                </PowmText>
-                            </Animated.View>
+                                <Animated.View
+                                    style={{
+                                        opacity: subtitleFadeAnim,
+                                        transform: [{ translateY: subtitleSlideAnim }],
+                                    }}
+                                >
+                                    <PowmText variant="text" style={styles.welcomeSubtitle}>
+                                        Your Digital Identity Wallet
+                                    </PowmText>
+                                </Animated.View>
 
-                            <Animated.View
-                                style={{
-                                    opacity: descFadeAnim,
-                                    transform: [{ translateY: descSlideAnim }],
-                                }}
-                            >
-                                <PowmText variant="text" style={styles.welcomeDescription}>
-                                    Create a secure, privacy-first identity wallet. We'll guide you through a quick setup process to get started.
-                                </PowmText>
-                            </Animated.View>
+                                <Animated.View
+                                    style={{
+                                        opacity: descFadeAnim,
+                                        transform: [{ translateY: descSlideAnim }],
+                                    }}
+                                >
+                                    <PowmText variant="text" style={styles.welcomeDescription}>
+                                        Create a secure, privacy-first identity wallet. We'll guide you through a quick setup process to get started.
+                                    </PowmText>
+                                </Animated.View>
 
-                            <Animated.View
-                                style={{
-                                    opacity: buttonFadeAnim,
-                                    transform: [{ translateY: buttonSlideAnim }],
-                                }}
-                            >
-                                <Button
-                                    title="Create My Wallet"
-                                    variant="primary"
-                                    icon="check"
-                                    onPress={handleStartOnboarding}
-                                    style={[styles.welcomeButton, styles.glassButtonPrimary]}
-                                />
-                            </Animated.View>
-                        </Column>
+                                <Animated.View
+                                    style={{
+                                        opacity: buttonFadeAnim,
+                                        transform: [{ translateY: buttonSlideAnim }],
+                                    }}
+                                >
+                                    <Button
+                                        title="Create My Wallet"
+                                        variant="primary"
+                                        onPress={handleStartOnboarding}
+                                        style={[styles.welcomeButton, styles.glassButtonPrimary] as any}
+                                    />
+                                </Animated.View>
+                            </Column>
+                        </View>
                     </View>
-                </View>
-            </BackgroundImage>
+                </BackgroundImage>
+            </Animated.View>
         );
     }
 
     // Success screen
     if (showSuccess) {
         return (
-            <BackgroundImage
-                source={require('../assets/images/welcome_bg.png')}
-                gradient={false}
-                imageStyle={{
-                    transform: [],
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    width: '100%',
-                    height: '100%',
-                }}
-            >
-                <View style={[styles.successRoot, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-                    <View style={[styles.welcomeContainer, styles.successContainer]}>
-                        <Animated.View style={[styles.successBackground, { opacity: successBgFadeAnim }]} pointerEvents="none">
-                            <View style={styles.successBurstLayer}>
-                                {successBurstParticles.map((particle, index) => (
-                                    <Animated.View
-                                        key={index}
-                                        style={[
-                                            styles.successBurstParticle,
-                                            {
-                                                width: particle.size,
-                                                height: particle.size,
-                                                borderRadius: particle.size / 2,
-                                                backgroundColor: particle.color,
-                                                opacity: particle.opacity,
-                                                transform: [
-                                                    { translateX: particle.translateX },
-                                                    { translateY: particle.translateY },
-                                                    { scale: particle.scale },
-                                                ],
-                                            },
-                                        ]}
-                                    />
-                                ))}
-                            </View>
-                        </Animated.View>
-
-                        <View style={styles.successContent}>
-                            <Animated.View style={{ opacity: successEmojiFadeAnim, transform: [{ translateY: successEmojiSlideAnim }] }}>
-                                <PowmText variant="title" style={styles.successEmoji}>
-                                    
-                                </PowmText>
-                            </Animated.View>
-
-                            <Animated.View style={{ opacity: successTitleFadeAnim, transform: [{ translateY: successTitleSlideAnim }] }}>
-                                <PowmText variant="title" style={styles.successTitle}>
-                                    Welcome to Powm!
-                                </PowmText>
-                            </Animated.View>
-
-                            <Animated.View style={{ opacity: successMessageFadeAnim, transform: [{ translateY: successMessageSlideAnim }] }}>
-                                <PowmText variant="text" style={styles.successMessage}>
-                                    Your wallet has been created successfully. The next step is to verify your identity, but you don't have to do that now.
-                                </PowmText>
-                            </Animated.View>
-
-                            <Animated.View style={{ opacity: successSubFadeAnim, transform: [{ translateY: successSubSlideAnim }] }}>
-                                <PowmText variant="text" style={styles.successSubMessage}>
-                                    What would you like to do next?
-                                </PowmText>
-                            </Animated.View>
-
-                            <Animated.View style={{ opacity: successButtonsFadeAnim, transform: [{ translateY: successButtonsSlideAnim }] }}>
-                                <View style={styles.successButtons}>
-                                    <Button
-                                        title="Verify Identity"
-                                        variant="primary"
-                                        onPress={() => {
-                                            router.replace('/startup');
-                                            // TODO: Navigate to identity verification flow
-                                        }}
-                                        style={[styles.successButtonFull, styles.glassButtonPrimary]}
-                                    />
-                                    <Button
-                                        title="I'll Do This Later"
-                                        variant="secondary"
-                                        onPress={() => router.replace('/startup')}
-                                        style={[styles.successButtonFull, styles.glassButtonSecondary]}
-                                    />
+            <Animated.View style={{ flex: 1, opacity: mainBgFadeAnim }}>
+                <BackgroundImage
+                    source={require('../assets/images/welcome_bg.png')}
+                    gradient={false}
+                    imageStyle={{
+                        transform: [],
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '100%',
+                        height: '100%',
+                    }}
+                >
+                    <View style={[styles.successRoot, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+                        <View style={[styles.welcomeContainer, styles.successContainer]}>
+                            <Animated.View style={[styles.successBackground, { opacity: successBgFadeAnim }]} pointerEvents="none">
+                                <View style={styles.successBurstLayer}>
+                                    {successBurstParticles.map((particle, index) => (
+                                        <Animated.View
+                                            key={index}
+                                            style={[
+                                                styles.successBurstParticle,
+                                                {
+                                                    width: particle.size,
+                                                    height: particle.size,
+                                                    borderRadius: particle.size / 2,
+                                                    backgroundColor: particle.color,
+                                                    opacity: particle.opacity,
+                                                    transform: [
+                                                        { translateX: particle.translateX },
+                                                        { translateY: particle.translateY },
+                                                        { scale: particle.scale },
+                                                    ],
+                                                },
+                                            ]}
+                                        />
+                                    ))}
                                 </View>
                             </Animated.View>
+
+                            <View style={styles.successContent}>
+                                <Animated.View style={{ opacity: successEmojiFadeAnim, transform: [{ translateY: successEmojiSlideAnim }] }}>
+                                    <PowmText variant="title" style={styles.successEmoji}>
+                                        🎉
+                                    </PowmText>
+                                </Animated.View>
+
+                                <Animated.View style={{ opacity: successTitleFadeAnim, transform: [{ translateY: successTitleSlideAnim }] }}>
+                                    <PowmText variant="title" style={[styles.welcomeTitle, { fontSize: 40 }]}>
+                                        Welcome to <PowmText variant="title" style={{ fontSize: 40, color: powmColors.electricMain }}>Powm</PowmText>!
+                                    </PowmText>
+                                </Animated.View>
+
+                                <Animated.View style={{ opacity: successMessageFadeAnim, transform: [{ translateY: successMessageSlideAnim }] }}>
+                                    <PowmText variant="text" style={styles.successMessage}>
+                                        Your wallet has been created successfully. The next step is to verify your identity, but you don't have to do that now.
+                                    </PowmText>
+                                </Animated.View>
+
+                                <Animated.View style={{ opacity: successSubFadeAnim, transform: [{ translateY: successSubSlideAnim }] }}>
+                                    <PowmText variant="text" style={styles.successSubMessage}>
+                                        What would you like to do next?
+                                    </PowmText>
+                                </Animated.View>
+
+                                <Animated.View style={{ opacity: successButtonsFadeAnim, transform: [{ translateY: successButtonsSlideAnim }] }}>
+                                    <View style={styles.successButtons}>
+                                        <Button
+                                            title="Verify Identity"
+                                            variant="primary"
+                                            onPress={() => {
+                                                router.replace('/startup');
+                                                // TODO: Navigate to identity verification flow
+                                            }}
+                                            style={[styles.successButtonFull, styles.glassButtonPrimary] as any}
+                                        />
+                                        <Button
+                                            title="I'll Do This Later"
+                                            variant="secondary"
+                                            onPress={() => router.replace('/startup')}
+                                            style={[styles.successButtonFull, styles.glassButtonSecondary] as any}
+                                        />
+                                    </View>
+                                </Animated.View>
+                            </View>
                         </View>
                     </View>
-                </View>
-            </BackgroundImage>
+                </BackgroundImage>
+            </Animated.View>
         );
     }
 
     if (showConfirmation) {
         return (
-            <BackgroundImage>
-                <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom }]}>
-                    <Column style={styles.content}>
-                        <Animated.View style={{ opacity: stepFadeAnim }}>
-                            <View style={styles.header}>
-                                <PowmText variant="title" style={styles.title}>
-                                    ✓ Almost There!
-                                </PowmText>
-                                <PowmText variant="text" style={styles.description}>
-                                    Please review your information before creating your wallet
-                                </PowmText>
-                            </View>
-                        </Animated.View>
+            <Animated.View style={{ flex: 1, opacity: mainBgFadeAnim }}>
+                <BackgroundImage>
+                    <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom }]}>
+                        <Column style={styles.content}>
+                            <Animated.View style={{ opacity: stepFadeAnim }}>
+                                <View style={styles.header}>
+                                    <PowmText variant="title" style={styles.title}>
+                                        ✓ Almost There!
+                                    </PowmText>
+                                    <PowmText variant="text" style={styles.description}>
+                                        Please review your information before creating your wallet
+                                    </PowmText>
+                                </View>
+                            </Animated.View>
 
-                        <Animated.View style={{ flex: 1, opacity: stepFadeAnim }}>
-                            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                                <GlassCard style={styles.confirmationCard}>
-                                    {[
-                                        'first_name',
-                                        'last_name',
-                                        'gender',
-                                        'date_of_birth',
-                                        'birth_country',
-                                        'nationality_1',
-                                        'nationality_2',
-                                        'nationality_3',
-                                    ]
-                                        .filter((key) => identityData[key as keyof IdentityData]?.trim() !== '')
-                                        .map((key) => {
-                                            const value = identityData[key as keyof IdentityData];
-                                            // Display country name instead of code for country fields
-                                            const isCountryField = key === 'birth_country' || key.startsWith('nationality_');
-                                            const displayValue = isCountryField && countryNames[key] ? countryNames[key] : value;
+                            <Animated.View style={{ flex: 1, opacity: stepFadeAnim }}>
+                                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                                    <GlassCard style={styles.confirmationCard}>
+                                        {[
+                                            'first_name',
+                                            'last_name',
+                                            'gender',
+                                            'date_of_birth',
+                                            'birth_country',
+                                            'nationality_1',
+                                            'nationality_2',
+                                            'nationality_3',
+                                        ]
+                                            .filter((key) => identityData[key as keyof IdentityData]?.trim() !== '')
+                                            .map((key) => {
+                                                const value = identityData[key as keyof IdentityData];
+                                                // Display country name instead of code for country fields
+                                                const isCountryField = key === 'birth_country' || key.startsWith('nationality_');
+                                                const displayValue = isCountryField && countryNames[key] ? countryNames[key] : value;
 
-                                            return (
-                                                <View key={key} style={styles.confirmationRow}>
-                                                    <PowmText variant="text" style={styles.confirmationLabel}>
-                                                        {key.replace(/_/g, ' ').toUpperCase()}
-                                                    </PowmText>
-                                                    <PowmText variant="textSemiBold" style={styles.confirmationValue}>
-                                                        {displayValue}
-                                                    </PowmText>
-                                                </View>
-                                            );
-                                        })}
-                                </GlassCard>
-                            </ScrollView>
-                        </Animated.View>
-
-                        <Animated.View style={{ opacity: stepFadeAnim }}>
-                            <View style={styles.buttonContainer}>
-                                <Button
-                                    title="Back"
-                                    variant="secondary"
-                                    onPress={handleBack}
-                                    style={styles.button}
-                                    disabled={isSubmitting}
-                                />
-                                <Button
-                                    title={isSubmitting ? "Creating..." : "Submit"}
-                                    variant="primary"
-                                    icon="check"
-                                    onPress={handleSubmit}
-                                    style={styles.button}
-                                    disabled={isSubmitting}
-                                />
-                            </View>
-                        </Animated.View>
-                    </Column>
-                </View>
-            </BackgroundImage>
-        );
-    }
-
-    return (
-        <BackgroundImage>
-            <Animated.View
-                style={[
-                    { flex: 1 },
-                    {
-                        opacity: formEntranceAnim,
-                    }
-                ]}
-            >
-                <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-                    <Column style={styles.content}>
-                        {/* Progress Bar */}
-                        <View style={styles.progressContainer}>
-                            <View style={styles.progressBar}>
-                                {STEPS.map((_, index) => (
-                                    <View
-                                        key={index}
-                                        style={[
-                                            styles.progressStep,
-                                            index <= currentStep && styles.progressStepActive,
-                                        ]}
-                                    />
-                                ))}
-                            </View>
-                            <PowmText variant="text" style={styles.progressText}>
-                                Step {currentStep + 1} of {STEPS.length}
-                            </PowmText>
-                        </View>
-
-                        <Animated.View style={{ opacity: stepFadeAnim }}>
-                            <View style={styles.header}>
-                                <PowmText variant="title" style={styles.title}>
-                                    {currentStepData.title}
-                                </PowmText>
-                                <PowmText variant="text" style={styles.description}>
-                                    {currentStepData.description}
-                                </PowmText>
-                            </View>
-                        </Animated.View>
-
-                        <Animated.View style={{ flex: 1, opacity: stepFadeAnim }}>
-                            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                                <GlassCard style={styles.formCard}>
-                                    {currentStepData.fields.map((field: any) => (
-                                        <View key={field.key} style={styles.fieldContainer}>
-                                            <PowmText variant="textSemiBold" style={styles.fieldLabel}>
-                                                {field.label}
-                                                {field.required && <PowmText style={styles.required}> *</PowmText>}
-                                            </PowmText>
-
-                                            {field.type === 'date' ? (
-                                                <>
-                                                    <Pressable
-                                                        style={styles.input}
-                                                        onPress={() => setShowDatePicker(true)}
-                                                    >
-                                                        <PowmText style={identityData.date_of_birth ? styles.inputText : styles.placeholder}>
-                                                            {identityData.date_of_birth || 'Select date of birth'}
+                                                return (
+                                                    <View key={key} style={styles.confirmationRow}>
+                                                        <PowmText variant="text" style={styles.confirmationLabel}>
+                                                            {key.replace(/_/g, ' ').toUpperCase()}
                                                         </PowmText>
-                                                    </Pressable>
-                                                    {Platform.OS === 'ios' ? (
-                                                        <Modal
-                                                            transparent={true}
-                                                            animationType="slide"
-                                                            visible={showDatePicker}
-                                                            onRequestClose={() => setShowDatePicker(false)}
-                                                        >
-                                                            <View style={styles.modalContainer}>
-                                                                <View style={styles.modalContent}>
-                                                                    <View style={styles.modalHeader}>
-                                                                        <Pressable onPress={() => setShowDatePicker(false)}>
-                                                                            <PowmText style={styles.modalDoneButton}>Done</PowmText>
-                                                                        </Pressable>
-                                                                    </View>
-                                                                    <DateTimePicker
-                                                                        value={dateValue}
-                                                                        mode="date"
-                                                                        display="spinner"
-                                                                        onChange={handleDateChange}
-                                                                        maximumDate={new Date()}
-                                                                        minimumDate={new Date(1900, 0, 1)}
-                                                                        textColor="white"
-                                                                        themeVariant="dark"
-                                                                    />
-                                                                </View>
-                                                            </View>
-                                                        </Modal>
-                                                    ) : (
-                                                        showDatePicker && (
-                                                            <DateTimePicker
-                                                                value={dateValue}
-                                                                mode="date"
-                                                                display="default"
-                                                                onChange={handleDateChange}
-                                                                maximumDate={new Date()}
-                                                                minimumDate={new Date(new Date().getFullYear() - 150, 0, 1)}
-                                                            />
-                                                        )
-                                                    )}
-                                                </>
-                                            ) : field.type === 'country' ? (
-                                                <>
-                                                    <Pressable
-                                                        style={styles.input}
-                                                        onPress={() => setActiveCountryPicker(field.key)}
-                                                    >
-                                                        <PowmText style={identityData[field.key as keyof IdentityData] ? styles.inputText : styles.placeholder}>
-                                                            {countryNames[field.key] || identityData[field.key as keyof IdentityData] || `Select ${field.label.toLowerCase()}`}
+                                                        <PowmText variant="textSemiBold" style={styles.confirmationValue}>
+                                                            {displayValue}
                                                         </PowmText>
-                                                    </Pressable>
-                                                    <CountryPicker
-                                                        countryCode={((identityData[field.key as keyof IdentityData] as string) || 'US') as CountryCode}
-                                                        visible={activeCountryPicker === field.key}
-                                                        onClose={() => setActiveCountryPicker(null)}
-                                                        onSelect={(country) => handleCountrySelect(country, field.key)}
-                                                        withFilter
-                                                        withFlag
-                                                        withAlphaFilter
-                                                        containerButtonStyle={{ display: 'none' }}
-                                                    />
-                                                </>
-                                            ) : field.type === 'gender' ? (
-                                                Platform.OS === 'ios' ? (
-                                                    <Pressable
-                                                        style={styles.input}
-                                                        onPress={handleGenderSelectIOS}
-                                                    >
-                                                        <PowmText style={identityData.gender ? styles.inputText : styles.placeholder}>
-                                                            {identityData.gender || 'Select gender'}
-                                                        </PowmText>
-                                                    </Pressable>
-                                                ) : (
-                                                    <View style={styles.pickerContainer}>
-                                                        <Picker
-                                                            selectedValue={identityData.gender}
-                                                            onValueChange={(value) => updateField('gender', value)}
-                                                            style={styles.picker}
-                                                            dropdownIconColor="rgba(255, 255, 255, 0.8)"
-                                                        >
-                                                            <Picker.Item label="Select gender" value="" />
-                                                            {GENDERS.map(gender => (
-                                                                <Picker.Item key={gender} label={gender} value={gender} />
-                                                            ))}
-                                                        </Picker>
                                                     </View>
-                                                )
-                                            ) : (
-                                                <>
-                                                    <TextInput
-                                                        ref={
-                                                            field.key === 'first_name'
-                                                                ? firstNameInputRef
-                                                                : field.key === 'last_name'
-                                                                    ? lastNameInputRef
-                                                                    : undefined
-                                                        }
-                                                        style={[styles.input, validationErrors[field.key] && styles.inputError]}
-                                                        value={identityData[field.key as keyof IdentityData]}
-                                                        onChangeText={(value) => updateField(field.key, value)}
-                                                        onBlur={() => handleFieldBlur(field.key)}
-                                                        returnKeyType={field.key === 'first_name' ? 'next' : 'done'}
-                                                        blurOnSubmit={field.key === 'first_name' ? false : true}
-                                                        onSubmitEditing={() => {
-                                                            if (field.key === 'first_name') {
-                                                                lastNameInputRef.current?.focus();
-                                                                return;
-                                                            }
-                                                        }}
-                                                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                                                        placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                                                        autoCapitalize="words"
-                                                    />
-                                                    {validationErrors[field.key] && (
-                                                        <PowmText style={styles.errorText}>
-                                                            {validationErrors[field.key]}
-                                                        </PowmText>
-                                                    )}
-                                                </>
-                                            )}
-                                        </View>
-                                    ))}
-                                </GlassCard>
-                            </ScrollView>
-                        </Animated.View>
+                                                );
+                                            })}
+                                    </GlassCard>
+                                </ScrollView>
+                            </Animated.View>
 
-                        <Animated.View style={{ opacity: stepFadeAnim }}>
-                            <View style={styles.buttonContainer}>
-                                {currentStep > 0 && (
+                            <Animated.View style={{ opacity: stepFadeAnim }}>
+                                <View style={styles.buttonContainer}>
                                     <Button
                                         title="Back"
                                         variant="secondary"
                                         onPress={handleBack}
                                         style={styles.button}
+                                        disabled={isSubmitting}
                                     />
-                                )}
-                                <Button
-                                    title={currentStep === STEPS.length - 1 ? "Review" : "Continue"}
-                                    variant="primary"
-                                    icon="check"
-                                    onPress={handleNext}
-                                    disabled={!canProceed() || Object.keys(validationErrors).length > 0}
-                                    style={currentStep === 0 ? styles.buttonFull : styles.button}
-                                />
-                            </View>
-                        </Animated.View>
-                    </Column>
-                </View>
+                                    <Button
+                                        title={isSubmitting ? "Creating..." : "Submit"}
+                                        variant="primary"
+                                        icon="check"
+                                        onPress={handleSubmit}
+                                        style={styles.button}
+                                        disabled={isSubmitting}
+                                    />
+                                </View>
+                            </Animated.View>
+                        </Column>
+                    </View>
+                </BackgroundImage>
             </Animated.View>
-        </BackgroundImage>
+        );
+    }
+
+    return (
+        <Animated.View style={{ flex: 1, opacity: mainBgFadeAnim }}>
+            <BackgroundImage>
+                <Animated.View
+                    style={[
+                        { flex: 1 },
+                        {
+                            opacity: formEntranceAnim,
+                        }
+                    ]}
+                >
+                    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+                        <Column style={styles.content}>
+                            {/* Progress Bar */}
+                            <View style={styles.progressContainer}>
+                                <View style={styles.progressBar}>
+                                    {STEPS.map((_, index) => (
+                                        <View
+                                            key={index}
+                                            style={[
+                                                styles.progressStep,
+                                                index <= currentStep && styles.progressStepActive,
+                                            ]}
+                                        />
+                                    ))}
+                                </View>
+                                <PowmText variant="text" style={styles.progressText}>
+                                    Step {currentStep + 1} of {STEPS.length}
+                                </PowmText>
+                            </View>
+
+                            <Animated.View style={{ opacity: stepFadeAnim }}>
+                                <View style={styles.header}>
+                                    <PowmText variant="title" style={styles.title}>
+                                        {currentStepData.title}
+                                    </PowmText>
+                                    <PowmText variant="text" style={styles.description}>
+                                        {currentStepData.description}
+                                    </PowmText>
+                                </View>
+                            </Animated.View>
+
+                            <Animated.View style={{ flex: 1, opacity: stepFadeAnim }}>
+                                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                                    <GlassCard style={styles.formCard}>
+                                        {currentStepData.fields.map((field: any) => (
+                                            <View key={field.key} style={styles.fieldContainer}>
+                                                <PowmText variant="textSemiBold" style={styles.fieldLabel}>
+                                                    {field.label}
+                                                    {field.required && <PowmText style={styles.required}> *</PowmText>}
+                                                </PowmText>
+
+                                                {field.type === 'date' ? (
+                                                    <>
+                                                        <Pressable
+                                                            style={styles.input}
+                                                            onPress={() => setShowDatePicker(true)}
+                                                        >
+                                                            <PowmText style={identityData.date_of_birth ? styles.inputText : styles.placeholder}>
+                                                                {identityData.date_of_birth || 'Select date of birth'}
+                                                            </PowmText>
+                                                        </Pressable>
+                                                        {Platform.OS === 'ios' ? (
+                                                            <Modal
+                                                                transparent={true}
+                                                                animationType="slide"
+                                                                visible={showDatePicker}
+                                                                onRequestClose={() => setShowDatePicker(false)}
+                                                            >
+                                                                <View style={styles.modalContainer}>
+                                                                    <View style={styles.modalContent}>
+                                                                        <View style={styles.modalHeader}>
+                                                                            <Pressable onPress={() => setShowDatePicker(false)}>
+                                                                                <PowmText style={styles.modalDoneButton}>Done</PowmText>
+                                                                            </Pressable>
+                                                                        </View>
+                                                                        <DateTimePicker
+                                                                            value={dateValue}
+                                                                            mode="date"
+                                                                            display="spinner"
+                                                                            onChange={handleDateChange}
+                                                                            maximumDate={new Date()}
+                                                                            minimumDate={new Date(1900, 0, 1)}
+                                                                            textColor="white"
+                                                                            themeVariant="dark"
+                                                                        />
+                                                                    </View>
+                                                                </View>
+                                                            </Modal>
+                                                        ) : (
+                                                            showDatePicker && (
+                                                                <DateTimePicker
+                                                                    value={dateValue}
+                                                                    mode="date"
+                                                                    display="default"
+                                                                    onChange={handleDateChange}
+                                                                    maximumDate={new Date()}
+                                                                    minimumDate={new Date(new Date().getFullYear() - 150, 0, 1)}
+                                                                />
+                                                            )
+                                                        )}
+                                                    </>
+                                                ) : field.type === 'country' ? (
+                                                    <>
+                                                        <Pressable
+                                                            style={styles.input}
+                                                            onPress={() => setActiveCountryPicker(field.key)}
+                                                        >
+                                                            <PowmText style={identityData[field.key as keyof IdentityData] ? styles.inputText : styles.placeholder}>
+                                                                {countryNames[field.key] || identityData[field.key as keyof IdentityData] || `Select ${field.label.toLowerCase()}`}
+                                                            </PowmText>
+                                                        </Pressable>
+                                                        <CountryPicker
+                                                            countryCode={((identityData[field.key as keyof IdentityData] as string) || 'US') as CountryCode}
+                                                            visible={activeCountryPicker === field.key}
+                                                            onClose={() => setActiveCountryPicker(null)}
+                                                            onSelect={(country) => handleCountrySelect(country, field.key)}
+                                                            withFilter
+                                                            withFlag
+                                                            withAlphaFilter
+                                                            containerButtonStyle={{ display: 'none' }}
+                                                        />
+                                                    </>
+                                                ) : field.type === 'gender' ? (
+                                                    Platform.OS === 'ios' ? (
+                                                        <Pressable
+                                                            style={styles.input}
+                                                            onPress={handleGenderSelectIOS}
+                                                        >
+                                                            <PowmText style={identityData.gender ? styles.inputText : styles.placeholder}>
+                                                                {identityData.gender || 'Select gender'}
+                                                            </PowmText>
+                                                        </Pressable>
+                                                    ) : (
+                                                        <View style={styles.pickerContainer}>
+                                                            <Picker
+                                                                selectedValue={identityData.gender}
+                                                                onValueChange={(value) => updateField('gender', value)}
+                                                                style={styles.picker}
+                                                                dropdownIconColor="rgba(255, 255, 255, 0.8)"
+                                                            >
+                                                                <Picker.Item label="Select gender" value="" />
+                                                                {GENDERS.map(gender => (
+                                                                    <Picker.Item key={gender} label={gender} value={gender} />
+                                                                ))}
+                                                            </Picker>
+                                                        </View>
+                                                    )
+                                                ) : (
+                                                    <>
+                                                        <TextInput
+                                                            ref={
+                                                                field.key === 'first_name'
+                                                                    ? firstNameInputRef
+                                                                    : field.key === 'last_name'
+                                                                        ? lastNameInputRef
+                                                                        : undefined
+                                                            }
+                                                            style={[styles.input, validationErrors[field.key] && styles.inputError]}
+                                                            value={identityData[field.key as keyof IdentityData]}
+                                                            onChangeText={(value) => updateField(field.key, value)}
+                                                            onBlur={() => handleFieldBlur(field.key)}
+                                                            returnKeyType={field.key === 'first_name' ? 'next' : 'done'}
+                                                            blurOnSubmit={field.key === 'first_name' ? false : true}
+                                                            onSubmitEditing={() => {
+                                                                if (field.key === 'first_name') {
+                                                                    lastNameInputRef.current?.focus();
+                                                                    return;
+                                                                }
+                                                            }}
+                                                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                                                            placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                                                            autoCapitalize="words"
+                                                        />
+                                                        {validationErrors[field.key] && (
+                                                            <PowmText style={styles.errorText}>
+                                                                {validationErrors[field.key]}
+                                                            </PowmText>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </View>
+                                        ))}
+                                    </GlassCard>
+                                </ScrollView>
+                            </Animated.View>
+
+                            <Animated.View style={{ opacity: stepFadeAnim }}>
+                                <View style={styles.buttonContainer}>
+                                    {currentStep > 0 && (
+                                        <Button
+                                            title="Back"
+                                            variant="secondary"
+                                            onPress={handleBack}
+                                            style={styles.button}
+                                        />
+                                    )}
+                                    <Button
+                                        title={currentStep === STEPS.length - 1 ? "Review" : "Continue"}
+                                        variant="primary"
+                                        icon="check"
+                                        onPress={handleNext}
+                                        disabled={!canProceed() || Object.keys(validationErrors).length > 0}
+                                        style={currentStep === 0 ? styles.buttonFull : styles.button}
+                                    />
+                                </View>
+                            </Animated.View>
+                        </Column>
+                    </View>
+                </Animated.View>
+            </BackgroundImage>
+        </Animated.View>
     );
 }
 
@@ -1237,6 +1275,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: -60,
     },
     welcomeContent: {
         gap: powmSpacing.lg,

@@ -1,7 +1,6 @@
 import {
   AnimatedEntry,
   BackgroundImage,
-  Button,
   GlassCard,
   PowmIcon,
   PowmText,
@@ -134,12 +133,6 @@ export default function PersonalInfoScreen() {
               </PowmText>
             </GlassCard>
           )}
-
-          <Button
-            title="Scan new document"
-            icon="qrcode"
-            onPress={() => router.push('/scan-document')}
-          />
 
         </ScrollView>
       </View>

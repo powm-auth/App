@@ -1,17 +1,19 @@
 import {
     AnimatedEntry,
     BackgroundImage,
+    GlassCard,
     PowmIcon,
     PowmText,
     Row
 } from '@/components';
 import { Notification, NotificationPanel } from '@/components/NotificationPanel';
 import { ScannerCard } from '@/components/home/ScannerCard';
+import { powmStyles } from '@/theme/powm-styles';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { getCurrentWallet } from '@/wallet/service';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
@@ -23,6 +25,7 @@ export default function HomeScreen() {
     const firstName = wallet?.attributes?.first_name?.value || 'User';
 
     const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+    const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([
         {
             id: '1',
@@ -38,6 +41,17 @@ export default function HomeScreen() {
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     };
 
+    const handlePresetSelect = (attributes: string[], autoStart = false) => {
+        setIsRequestModalOpen(false);
+        router.push({
+            pathname: '/request-identity',
+            params: {
+                attributes: JSON.stringify(attributes),
+                autoStart: autoStart ? 'true' : 'false'
+            }
+        });
+    };
+
     return (
         <BackgroundImage>
             <View style={styles.container}>
@@ -48,6 +62,75 @@ export default function HomeScreen() {
                     notifications={notifications}
                     onMarkAllRead={handleMarkAllRead}
                 />
+
+                <Modal
+                    visible={isRequestModalOpen}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => {
+                        setIsRequestModalOpen(false);
+                    }}
+                >
+                    <View style={powmStyles.modalOverlay}>
+                        <Pressable style={StyleSheet.absoluteFill} onPress={() => {
+                            setIsRequestModalOpen(false);
+                        }} />
+                        <GlassCard style={powmStyles.modalContent}>
+                            <PowmText variant="subtitle" align="center" style={{ marginBottom: powmSpacing.lg }}>
+                                Request Identity
+                            </PowmText>
+
+                            <View style={{ gap: powmSpacing.md }}>
+                                <TouchableOpacity
+                                    style={styles.presetButton}
+                                    onPress={() => handlePresetSelect(['first_name', 'last_name', 'date_of_birth'], true)}
+                                >
+                                    <View style={styles.presetIcon}>
+                                        <PowmIcon name="id" size={20} color={powmColors.electricMain} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <PowmText variant="subtitleSemiBold" style={{ fontSize: 16 }}>Full Name + Age</PowmText>
+                                        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>Name and Date of Birth</PowmText>
+                                    </View>
+                                    <PowmIcon name="chevron" size={16} color={powmColors.gray} />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.presetButton}
+                                    onPress={() => handlePresetSelect(['age_over_18', 'age_over_21'], true)}
+                                >
+                                    <View style={styles.presetIcon}>
+                                        <PowmIcon name="help" size={28} color={powmColors.electricMain} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <PowmText variant="subtitleSemiBold" style={{ fontSize: 16 }}>Age Verification</PowmText>
+                                        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>Verify 18+ and 21+ status</PowmText>
+                                    </View>
+                                    <PowmIcon name="chevron" size={16} color={powmColors.gray} />
+                                </TouchableOpacity>
+
+                                <View style={styles.divider} />
+
+                                <TouchableOpacity
+                                    style={styles.presetButton}
+                                    onPress={() => {
+                                        setIsRequestModalOpen(false);
+                                        router.push('/request-identity');
+                                    }}
+                                >
+                                    <View style={[styles.presetIcon, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+                                        <PowmIcon name="add" size={20} color={powmColors.white} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <PowmText variant="subtitleSemiBold" style={{ fontSize: 16 }}>Custom Request</PowmText>
+                                        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>Select specific attributes</PowmText>
+                                    </View>
+                                    <PowmIcon name="chevron" size={16} color={powmColors.gray} />
+                                </TouchableOpacity>
+                            </View>
+                        </GlassCard>
+                    </View>
+                </Modal>
 
                 <ScrollView
                     style={styles.scrollView}
@@ -75,7 +158,7 @@ export default function HomeScreen() {
                     {/* Wallet-to-Wallet Identity Exchange */}
                     <AnimatedEntry index={1}>
                         <Pressable
-                            onPress={() => router.push('/request-identity')}
+                            onPress={() => setIsRequestModalOpen(true)}
                             style={({ pressed }) => [
                                 styles.requestIdentityCard,
                                 pressed && { opacity: 0.8 },
@@ -180,5 +263,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
+    },
+    presetButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        padding: powmSpacing.md,
+        borderRadius: powmRadii.md,
+        gap: powmSpacing.md,
+    },
+    presetIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: powmColors.border,
+        width: '100%',
+        opacity: 0.3,
+        marginVertical: 4,
     },
 });

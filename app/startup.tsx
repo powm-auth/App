@@ -46,29 +46,33 @@ export default function StartupScreen() {
                 // Attempt authentication (biometrics or device lock screen)
                 let authenticated = false;
                 while (!authenticated && !hasNavigated.current) {
-                    const result = await LocalAuthentication.authenticateAsync();
+                    try {
+                        const result = await LocalAuthentication.authenticateAsync();
 
-                    if (result.success) {
-                        authenticated = true;
-                        needsAuth.current = false;
-                    } else if (result.error === 'user_cancel') {
-                        // User cancelled, retry authentication
-                        continue;
-                    } else if (result.error === 'system_cancel') {
-                        // System cancelled (incoming call, app switched, etc.)
-                        // Wait for app to come back to foreground
-                        console.log('[Startup] Authentication cancelled by system, waiting for app focus');
+                        if (result.success) {
+                            authenticated = true;
+                            needsAuth.current = false;
+                        } else if (result.error === 'user_cancel') {
+                            // User cancelled, retry authentication
+                            continue;
+                        } else if (result.error === 'system_cancel') {
+                            // System cancelled (incoming call, app switched, etc.)
+                            // Wait for app to come back to foreground
+                            console.log('[Startup] Authentication cancelled by system, waiting for app focus');
+                            needsAuth.current = true;
+                            return;
+                        } else {
+                            // Other error, retry after delay
+                            console.error('[Startup] Authentication failed:', result.error);
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            continue;
+                        }
+                    } catch (authError: any) {
+                        // Handle activity lifecycle errors on Android
+                        console.warn('[Startup] Auth error (likely activity destroyed):', authError.message);
+                        // Wait for app to stabilize, then retry
                         needsAuth.current = true;
                         return;
-                    } else {
-                        // Other error, show error screen
-                        console.error('[Startup] Authentication failed:', result.error);
-                        //setStorageError(true);
-                        //return;
-                        await new Promise(resolve => setTimeout(resolve, 5000));
-                        continue;
-                        //setAuthError(true);
-                        //return;
                     }
                 }
 
@@ -98,8 +102,12 @@ export default function StartupScreen() {
         // Listen for app state changes to retry authentication if needed
         const subscription = AppState.addEventListener('change', (nextAppState) => {
             if (nextAppState === 'active' && needsAuth.current && !hasNavigated.current) {
-                console.log('[Startup] App became active, retrying authentication');
-                checkWallet();
+                // Small delay to let the activity fully initialize
+                setTimeout(() => {
+                    needsAuth.current = false;
+                    console.log('[Startup] App became active, retrying authentication');
+                    checkWallet();
+                }, 300);
             }
         });
 

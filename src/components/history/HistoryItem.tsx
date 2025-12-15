@@ -12,20 +12,24 @@ export interface ActivityItem {
   dateLabel: string;
   type: 'trusted' | 'anonymous';
   iconColor: string;
+  result?: 'accepted' | 'rejected';
+  attributes_requested: string[];
 }
 
 interface HistoryItemProps {
   item: ActivityItem;
   isEditing: boolean;
   onDelete: (id: string) => void;
+  onPress: (item: ActivityItem) => void;
   isLast?: boolean;
 }
 
-export const HistoryItem: React.FC<HistoryItemProps> = ({ 
-  item, 
-  isEditing, 
+export const HistoryItem: React.FC<HistoryItemProps> = ({
+  item,
+  isEditing,
   onDelete,
-  isLast 
+  onPress,
+  isLast
 }) => {
   const deleteScale = useRef(new Animated.Value(0)).current;
 
@@ -51,36 +55,31 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
           </Animated.View>
         </Pressable>
       ) : (
-        <View style={[
-          styles.statusBadge, 
-          { backgroundColor: item.type === 'trusted' ? 'rgba(96, 107, 226, 0.15)' : 'rgba(184, 134, 11, 0.15)' }
-        ]}>
-          <PowmText 
-            variant="text" 
-            style={{ 
-              fontSize: 10, 
-              color: item.type === 'trusted' ? powmColors.activeElectricMain : '#B8860B',
-              fontWeight: '600'
-            }}
-          >
-            {item.type === 'trusted' ? 'Trusted' : 'Anonymous'}
-          </PowmText>
-        </View>
+        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>
+          {item.time}
+        </PowmText>
       )}
     </View>
   );
 
+  const isRejected = item.result === 'rejected';
+  const isAnonymousIdOnly = item.attributes_requested?.length === 1 && item.attributes_requested[0] === 'anonymous_id';
+  const subtitleText = isRejected
+    ? 'Request rejected'
+    : (isAnonymousIdOnly ? 'Anonymous ID provided' : 'Identity provided');
+
   return (
-    <ListItem
-      title={item.name}
-      subtitle={`${item.type === 'anonymous' ? 'Anonymous check' : 'Identity verified'} • ${item.time}`}
-      icon={item.type === 'anonymous' ? 'face' : 'powmLogo'}
-      iconColor={item.iconColor}
-      rightElement={RightElement}
-      showChevron={isLast}
-      // Disable default press effect if not editing (or add expand logic here if needed)
-      onPress={isEditing ? undefined : () => {}} 
-    />
+    <View style={{ opacity: isRejected ? 0.5 : 1 }}>
+      <ListItem
+        title={item.name}
+        subtitle={subtitleText}
+        icon={item.type === 'anonymous' ? 'face' : 'powmLogo'}
+        iconColor={item.iconColor}
+        rightElement={RightElement}
+        showChevron={false}
+        onPress={isEditing ? undefined : () => onPress(item)}
+      />
+    </View>
   );
 };
 

@@ -22,9 +22,9 @@ const TABS: FootBarTab[] = [
 
 const getIndex = (route: string) => {
   if (route.includes('/history')) return 0;
-  if (route === '/home' || route === '') return 1;
-  if (route.includes('/profile')) return 2;
-  return 1;
+  if (route === '/home' || route === '/home/' || route === '') return 1;
+  // Default to Profile (2) for all other routes (sub-menus, etc.)
+  return 2;
 };
 
 export const FootBar: React.FC = () => {
@@ -33,11 +33,19 @@ export const FootBar: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   // Hide footer on full-screen flows
-  const isHidden = pathname.includes('/scan') || pathname.includes('/provide-identity');
+  const isHidden = pathname.includes('/scan') || pathname.includes('/provide-identity') || pathname.includes('/request-identity');
 
   const isActive = (route: string) => {
     if (route === '/home') {
       return pathname === '/home' || pathname === '/home/';
+    }
+    if (route === '/history') {
+      return pathname.includes('/history');
+    }
+    if (route === '/profile') {
+      // Profile is active for any route that isn't Home or History
+      // This covers all sub-menus (personal-info, my-data, etc.)
+      return !pathname.includes('/home') && !pathname.includes('/history');
     }
     return pathname.includes(route);
   };

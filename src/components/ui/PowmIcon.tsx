@@ -146,11 +146,11 @@ export const PowmIcon: React.FC<PowmIconProps> = ({
 
       case 'check':
         return (
-          <Svg width={size} height={size} viewBox="0 0 34 34" fill="none">
+          <Svg width={size} height={size} viewBox="5 5 24 24" fill="none">
             <Path
               d="M8.625 16.8676L13.125 21.2794L24.375 10.25"
               stroke={color}
-              strokeWidth="2"
+              strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
             />

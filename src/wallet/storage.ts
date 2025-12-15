@@ -26,6 +26,7 @@ interface WalletFileData {
     identity_attribute_hashing_scheme: string;
     anonymizing_hashing_scheme: string;
     attributes: Record<string, { value: string; salt: string }>;
+    stats: { approved_shares: number };
 }
 
 /**
@@ -118,6 +119,7 @@ export async function loadWallet(): Promise<Wallet | null> {
             identity_attribute_hashing_scheme: fileData.identity_attribute_hashing_scheme,
             anonymizing_hashing_scheme: fileData.anonymizing_hashing_scheme,
             attributes: fileData.attributes,
+            stats: fileData.stats || { approved_shares: 0 },
         };
 
         return wallet;
@@ -217,6 +219,7 @@ export async function saveWallet(
             anonymizing_hashing_scheme: wallet.anonymizing_hashing_scheme,
             signing_algorithm: wallet.signing_algorithm,
             updated_at: wallet.updated_at ? wallet.updated_at.toISOString() : null,
+            stats: wallet.stats,
         };
 
         // Sort keys for consistent serialization
@@ -336,6 +339,7 @@ export async function updateWalletFile(wallet: Wallet): Promise<void> {
         anonymizing_hashing_scheme: wallet.anonymizing_hashing_scheme,
         signing_algorithm: wallet.signing_algorithm,
         updated_at: wallet.updated_at ? wallet.updated_at.toISOString() : null,
+        stats: wallet.stats,
     };
 
     const sortedFileData = sortObjectKeys(fileData);
