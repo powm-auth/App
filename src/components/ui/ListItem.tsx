@@ -10,6 +10,7 @@ interface ListItemProps {
   subtitle?: string;
   icon?: PowmIconName;
   iconColor?: string;
+  iconSize?: number;
   rightElement?: React.ReactNode;
   onPress?: () => void;
   style?: ViewStyle;
@@ -26,6 +27,7 @@ export const ListItem: React.FC<ListItemProps> = ({
   subtitle,
   icon,
   iconColor = powmColors.electricMain,
+  iconSize = 24,
   rightElement,
   onPress,
   style,
@@ -46,7 +48,7 @@ export const ListItem: React.FC<ListItemProps> = ({
       <Row gap={16} align="center">
         {icon && (
           <View style={styles.iconCircle}>
-            <PowmIcon name={icon} size={24} color={iconColor} />
+            <PowmIcon name={icon} size={iconSize} color={iconColor} />
           </View>
         )}
 

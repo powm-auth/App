@@ -12,6 +12,7 @@ import {
 } from '@/components';
 import { deleteWallet, rotateAnonymizingKey } from '@/services/wallet-storage';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { ANONYMOUS_ID_INFO_MESSAGE, ANONYMOUS_ID_INFO_TITLE } from '@/utils/constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -94,18 +95,8 @@ export default function MyDataScreen() {
           text: "Learn More",
           onPress: () => {
             Alert.alert(
-              "What is an Anonymous ID?",
-              "When an app verifies your identity, it might also request your Anonymous ID alongside your real details (like name or date of birth).\n\n" +
-              "Your Anonymous ID:\n" +
-              "• Is a unique code generated just for that app\n" +
-              "• Lets apps recognize you on future visits\n" +
-              "• Is different for every app — they can't track you across apps\n\n" +
-              "If you reset your Anonymous ID:\n\n" +
-              "• Apps will see you as a new anonymous user\n" +
-              "• Your past anonymous activity can't be linked to you\n" +
-              "• Your real identity & documents stay unchanged\n" +
-              "• This cannot be undone\n\n" +
-              "Use this if you want a fresh anonymous identity or suspect it may have been compromised.",
+              ANONYMOUS_ID_INFO_TITLE,
+              ANONYMOUS_ID_INFO_MESSAGE,
               [
                 { text: "Cancel", style: "cancel" },
                 { text: "Reset Anonymous ID", style: "destructive", onPress: confirmRotateAnonymizingKey }

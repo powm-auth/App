@@ -27,6 +27,7 @@ interface MenuItem {
   icon: PowmIconName;
   label: string;
   onPress: () => void;
+  iconSize?: number;
 }
 
 export default function ProfileScreen() {
@@ -63,9 +64,10 @@ export default function ProfileScreen() {
       title: 'Support',
       items: [
         {
-          icon: 'face',
+          icon: 'help',
           label: 'Help',
           onPress: () => router.push('/help'),
+          iconSize: 36,
         },
       ],
     },
@@ -129,6 +131,7 @@ export default function ProfileScreen() {
                           <ListItem
                             title={item.label}
                             icon={item.icon}
+                            iconSize={item.iconSize}
                             onPress={item.onPress}
                             showChevron
                           />

@@ -1,4 +1,5 @@
 import {
+  AttributeList,
   BackgroundImage,
   Button,
   Column,
@@ -8,7 +9,6 @@ import {
 } from '@/components';
 import {
   acceptChallenge,
-  getAttributeDisplayName,
   getCurrentWallet,
   rejectChallenge,
   sortAttributeKeys
@@ -58,7 +58,7 @@ export default function ValidateIdentityScreen() {
   }
 
   const appName = claimResponse.claim.requester_display_name ||
-    (claimResponse.claim.requester_type === 'wallet' ? 'A Wallet' : 'Unknown Requester');
+    (claimResponse.claim.requester_type === 'wallet' ? 'Private Wallet' : 'Unknown Requester');
   const requestedAttrs = claimResponse.challenge.identity_attributes;
   const wallet = getCurrentWallet();
   if (!wallet) {
@@ -103,25 +103,16 @@ export default function ValidateIdentityScreen() {
           <GlassCard style={styles.questionCard}>
             <ScrollView style={{ maxHeight: 450 }} showsVerticalScrollIndicator={false}>
               <Column gap={powmSpacing.md}>
-                <PowmText variant="subtitle" align="center" style={{ fontSize: 20, marginBottom: powmSpacing.md }}>Requested Information</PowmText>
-
-                {sortedRequestedAttrs.map((attr, idx) => {
-                  const hasValue = attr === 'anonymous_id' || !!walletAttrs[attr]?.value;
-                  return (
-                    <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <PowmText variant="text" color={powmColors.gray} style={{ flex: 1 }}>
-                        {getAttributeDisplayName(attr)}
-                      </PowmText>
-                      <PowmText
-                        variant="text"
-                        color={hasValue ? powmColors.electricMain : powmColors.inactive}
-                        style={{ flex: 1, textAlign: 'right', opacity: hasValue ? 1 : 0.6 }}
-                      >
-                        {attr === 'anonymous_id' ? 'Generated ID' : (walletAttrs[attr]?.value || 'Not available')}
-                      </PowmText>
-                    </View>
-                  );
-                })}
+                <AttributeList
+                  title="Requested Information"
+                  appName={appName}
+                  showInfoIcon={true}
+                  attributes={sortedRequestedAttrs.map(attr => ({
+                    key: attr,
+                    value: walletAttrs[attr]?.value,
+                    isAvailable: attr === 'anonymous_id' || !!walletAttrs[attr]?.value
+                  }))}
+                />
 
                 <View style={{ marginTop: powmSpacing.lg }}>
                   <PowmText variant="text" color={powmColors.inactive} style={styles.descriptionText}>

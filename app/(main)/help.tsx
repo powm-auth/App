@@ -8,9 +8,9 @@ import {
   Row,
   ScreenHeader,
 } from '@/components';
-import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Animated,
   LayoutAnimation,
@@ -40,7 +40,7 @@ const FAQItem = ({ question, answer, index }: FAQItemProps) => {
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded(!expanded);
-    
+
     Animated.timing(rotateAnim, {
       toValue: expanded ? 0 : 1,
       duration: 200,
@@ -67,7 +67,7 @@ const FAQItem = ({ question, answer, index }: FAQItemProps) => {
             <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
           </Animated.View>
         </Pressable>
-        
+
         {expanded && (
           <View style={styles.answerContainer}>
             <PowmText variant="text" color={powmColors.inactive} style={styles.answerText}>
@@ -125,18 +125,18 @@ export default function HelpScreen() {
 
           <Column gap={0}>
             {faqs.map((item, index) => (
-              <FAQItem 
-                key={index} 
-                question={item.question} 
-                answer={item.answer} 
-                index={index} 
+              <FAQItem
+                key={index}
+                question={item.question}
+                answer={item.answer}
+                index={index}
               />
             ))}
           </Column>
 
           <View style={styles.footerNote}>
             <PowmText variant="text" color={powmColors.gray} align="center" style={{ fontSize: 12 }}>
-              Still need help? Contact support at support@powm.com
+              Still need help? Visit powm.app/support
             </PowmText>
           </View>
 

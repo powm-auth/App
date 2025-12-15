@@ -1,4 +1,5 @@
 import {
+    AttributeList,
     BackgroundImage,
     Button,
     CloseButton,
@@ -9,23 +10,13 @@ import {
     Row,
     Toggle
 } from '@/components';
-import { createWalletChallenge, getAttributeDisplayName, getCurrentWallet, pollChallenge } from '@/services/wallet-service';
+import { createWalletChallenge, getAttributeDisplayName, getCurrentWallet, pollChallenge, sortAttributeKeys } from '@/services/wallet-service';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { ATTRIBUTE_DEFINITIONS } from '@/utils/constants';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-
-// Available attributes to request
-const AVAILABLE_ATTRIBUTES = [
-    { key: 'first_name', description: 'Legal first name' },
-    { key: 'last_name', description: 'Legal last name' },
-    { key: 'date_of_birth', description: 'Full date of birth' },
-    { key: 'age_over_18', description: 'Verify adult status' },
-    { key: 'age_over_21', description: 'Verify 21+ status' },
-    { key: 'nationality', description: 'Country of citizenship' },
-    { key: 'gender', description: 'Gender identity' },
-];
 
 export default function RequestIdentityScreen() {
     const router = useRouter();
@@ -176,22 +167,24 @@ export default function RequestIdentityScreen() {
                             </PowmText>
 
                             <Column gap={powmSpacing.sm}>
-                                {AVAILABLE_ATTRIBUTES.map((attr) => (
-                                    <GlassCard key={attr.key} padding={powmSpacing.md}>
-                                        <Row justify="space-between" align="center">
-                                            <Column flex={1} gap={4}>
-                                                <PowmText variant="subtitleSemiBold">{getAttributeDisplayName(attr.key)}</PowmText>
-                                                <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>
-                                                    {attr.description}
-                                                </PowmText>
-                                            </Column>
-                                            <Toggle
-                                                value={selectedAttributes.includes(attr.key)}
-                                                onValueChange={() => toggleAttribute(attr.key)}
-                                            />
-                                        </Row>
-                                    </GlassCard>
-                                ))}
+                                {Object.entries(ATTRIBUTE_DEFINITIONS)
+                                    .filter(([_, def]) => def.requestable)
+                                    .map(([key, def]) => (
+                                        <GlassCard key={key} padding={powmSpacing.md}>
+                                            <Row justify="space-between" align="center">
+                                                <Column flex={1} gap={4}>
+                                                    <PowmText variant="subtitleSemiBold">{def.label}</PowmText>
+                                                    <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>
+                                                        {def.description}
+                                                    </PowmText>
+                                                </Column>
+                                                <Toggle
+                                                    value={selectedAttributes.includes(key)}
+                                                    onValueChange={() => toggleAttribute(key)}
+                                                />
+                                            </Row>
+                                        </GlassCard>
+                                    ))}
                             </Column>
 
                             <Button
@@ -266,40 +259,21 @@ export default function RequestIdentityScreen() {
                     {stage === 'completed' && identityData && (
                         <Column align="center" gap={powmSpacing.lg}>
                             <View style={styles.successIcon}>
-                                <PowmIcon name="check" color={powmColors.successGreen} size={48} />
+                                <PowmIcon name="check" color={powmColors.successGreen} size={64} />
                             </View>
                             <PowmText variant="title" color={powmColors.successGreen}>
-                                Identity Verified!
+                                Identity Obtained!
                             </PowmText>
 
                             <GlassCard padding={powmSpacing.lg} style={{ width: '100%' }}>
-                                <PowmText variant="subtitle" style={{ marginBottom: powmSpacing.md }}>
-                                    Verified Information
-                                </PowmText>
-                                {identityData.attributes && Object.entries(identityData.attributes).map(([key, value]) => {
-                                    let displayValue = '';
-
-                                    if (typeof value === 'string' || typeof value === 'number') {
-                                        displayValue = String(value);
-                                    } else if (typeof value === 'boolean') {
-                                        displayValue = value ? 'Yes' : 'No';
-                                    } else if (value === null || value === undefined) {
-                                        displayValue = 'Not provided';
-                                    } else {
-                                        displayValue = String(value);
-                                    }
-
-                                    return (
-                                        <Row key={key} justify="space-between" style={{ marginBottom: powmSpacing.sm }}>
-                                            <PowmText variant="text" color={powmColors.gray}>
-                                                {getAttributeDisplayName(key)}:
-                                            </PowmText>
-                                            <PowmText variant="text" color={powmColors.white} style={{ flexShrink: 1, textAlign: 'right' }}>
-                                                {displayValue}
-                                            </PowmText>
-                                        </Row>
-                                    );
-                                })}
+                                <AttributeList
+                                    title="Verified Information"
+                                    attributes={sortAttributeKeys(Object.keys(identityData.attributes || {})).map(key => ({
+                                        key,
+                                        value: identityData.attributes[key],
+                                        isAvailable: true
+                                    }))}
+                                />
                             </GlassCard>
 
                             <Button

@@ -1,4 +1,5 @@
 export * from './AnimatedEntry';
+export * from './AttributeList';
 export * from './BackgroundImage';
 export * from './Button';
 export * from './Card';

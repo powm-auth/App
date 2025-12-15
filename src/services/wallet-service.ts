@@ -6,7 +6,7 @@
 import { acceptIdentityChallenge, claimIdentityChallenge, rejectIdentityChallenge } from '@/services/powm-api';
 import { loadWallet, withAnonymizingKey, withSigningKey } from '@/services/wallet-storage';
 import type { ClaimChallengeResponse, Wallet } from '@/types/powm';
-import { ATTRIBUTE_DISPLAY_NAMES } from '@/utils/constants';
+import { ATTRIBUTE_DEFINITIONS } from '@/utils/constants';
 import { createIdentityChallenge, decryptAndVerifyIdentity, decryptIdentityChallengeResponse, verifyIdentityChallengeSignature, waitForCompletedIdentityChallenge } from '@powm/sdk-js';
 import { encrypting, keyedHashing, signing } from '@powm/sdk-js/crypto';
 import { Buffer } from 'buffer';
@@ -20,8 +20,8 @@ const { hash } = keyedHashing;
 let currentWallet: Wallet | null = null;
 
 export function getAttributeDisplayName(key: string): string {
-    if (ATTRIBUTE_DISPLAY_NAMES[key]) {
-        return ATTRIBUTE_DISPLAY_NAMES[key];
+    if (ATTRIBUTE_DEFINITIONS[key]) {
+        return ATTRIBUTE_DEFINITIONS[key].label;
     }
     // Fallback: replace underscores with spaces and capitalize words
     console.warn(`Display name not found for attribute key: ${key}`);
@@ -32,7 +32,7 @@ export function getAttributeDisplayName(key: string): string {
  * Sort attribute keys based on the standard display order
  */
 export function sortAttributeKeys(keys: string[]): string[] {
-    const displayOrder = Object.keys(ATTRIBUTE_DISPLAY_NAMES);
+    const displayOrder = Object.keys(ATTRIBUTE_DEFINITIONS);
     return [...keys].sort((a, b) => {
         const indexA = displayOrder.indexOf(a);
         const indexB = displayOrder.indexOf(b);
