@@ -4,11 +4,11 @@ import {
   Column,
   GlassCard,
   LoadingOverlay,
-  PowmText,
-  ScreenHeader
+  PowmText
 } from '@/components';
 import {
   acceptChallenge,
+  getAttributeDisplayName,
   getCurrentWallet,
   rejectChallenge
 } from '@/services/wallet-service';
@@ -17,7 +17,7 @@ import type { ClaimChallengeResponse } from '@/types/powm';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const getEncryptionSchemeName = (scheme: string) => {
@@ -63,13 +63,11 @@ export default function ValidateIdentityScreen() {
   if (!wallet) {
     return (
       <BackgroundImage>
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-          <ScreenHeader title="Validate Identity" subtitle="Error" />
-          <View style={styles.errorContainer}>
-            <PowmText variant="text" style={styles.errorText}>
-              Wallet not loaded. Please restart the app.
-            </PowmText>
-          </View>
+        <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+          <PowmText variant="title" align="center">Error</PowmText>
+          <PowmText variant="text" align="center" style={{ marginTop: powmSpacing.md }}>
+            Wallet not loaded. Please restart the app.
+          </PowmText>
         </View>
       </BackgroundImage>
     );
@@ -83,54 +81,71 @@ export default function ValidateIdentityScreen() {
 
   return (
     <BackgroundImage>
-      <View style={[styles.container, { paddingTop: insets.top + powmSpacing.xl, paddingBottom: insets.bottom + powmSpacing.lg }]}>
+      <View style={[styles.container, { paddingTop: insets.top + powmSpacing.sm, paddingBottom: insets.bottom + powmSpacing.lg }]}>
 
         <View style={styles.content}>
           {/* Header / Title Section */}
-          <Column gap={powmSpacing.sm} style={styles.headerSection}>
-            <PowmText variant="title" align="center">
-              {appName} wants to know:
+          <Column gap={powmSpacing.xs} style={styles.headerSection}>
+            <PowmText variant="title" align="center" color={powmColors.electricMain} style={{ fontSize: 36 }}>
+              {appName}
             </PowmText>
-            {requestedAttrs.map((attr, idx) => (
-              <PowmText key={idx} variant="title" color={powmColors.electricMain} align="center">
-                {attr.replace('_', ' ')}
-              </PowmText>
-            ))}
+            <PowmText variant="subtitle" align="center" color={powmColors.gray} style={{ fontSize: 16 }}>
+              is requesting your identity
+            </PowmText>
           </Column>
 
-          <View style={styles.spacer} />
+          <View style={{ flex: 0.3 }} />
 
           {/* Question Section */}
           <GlassCard style={styles.questionCard}>
-            <Column gap={powmSpacing.md}>
-              <PowmText variant="subtitle" style={{ fontSize: 20 }}>Requested Information:</PowmText>
+            <ScrollView style={{ maxHeight: 450 }} showsVerticalScrollIndicator={false}>
+              <Column gap={powmSpacing.md}>
+                <PowmText variant="subtitle" align="center" style={{ fontSize: 20, marginBottom: powmSpacing.md }}>Requested Information</PowmText>
 
-              {requestedAttrs.map((attr, idx) => (
-                <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <PowmText variant="text" color={powmColors.gray}>
-                    {attr.replace('_', ' ')}:
-                  </PowmText>
-                  <PowmText variant="text" color={powmColors.electricMain}>
-                    {walletAttrs[attr]?.value || 'Not available'}
+                {requestedAttrs.map((attr, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <PowmText variant="text" color={powmColors.gray} style={{ flex: 1 }}>
+                      {getAttributeDisplayName(attr)}
+                    </PowmText>
+                    <PowmText variant="text" color={powmColors.electricMain} style={{ flex: 1, textAlign: 'right' }}>
+                      {attr === 'anonymous_id' ? 'Generated ID' : (walletAttrs[attr]?.value || 'Not available')}
+                    </PowmText>
+                  </View>
+                ))}
+
+                <View style={{ marginTop: powmSpacing.lg }}>
+                  <PowmText variant="text" color={powmColors.inactive} style={styles.descriptionText}>
+                    🔒 <PowmText variant="text" color={powmColors.electricMain}>End-to-end encrypted</PowmText> - This data goes directly to {appName}. Powm never sees it.{' '}
+                    <Text
+                      style={{ color: powmColors.electricMain, textDecorationLine: 'underline' }}
+                      onPress={() => {
+                        Alert.alert(
+                          'How Powm Works',
+                          `Your identity is end-to-end encrypted between you and ${appName}.\n\n` +
+                          '✅ Powm never sees this data\n\n' +
+                          `✅ Powm only provides a cryptographic checksum (hash) of your identity to ${appName}\n\n` +
+                          `✅ This checksum allows ${appName} to prove authenticity on their end\n\n` +
+                          `${appName} can verify your identity is real, but Powm cannot see what data was shared.`
+                        );
+                      }}
+                    >
+                      Learn more
+                    </Text>
                   </PowmText>
                 </View>
-              ))}
 
-              <PowmText variant="text" color={powmColors.inactive} style={[styles.descriptionText, { marginTop: powmSpacing.md }]}>
-                Powm will not have any information or a way to link you to this check or this company. Powm respects <PowmText variant="text" color={powmColors.electricMain}>double anonymat</PowmText>.
-              </PowmText>
+                <PowmText variant="text" color={powmColors.gray} style={[styles.descriptionText, { marginTop: powmSpacing.md }]}>
+                  Do you accept to share this information with <PowmText variant="text" color={powmColors.electricMain}>{appName}</PowmText>?
+                </PowmText>
 
-              <PowmText variant="text" color={powmColors.gray} style={[styles.descriptionText, { marginTop: powmSpacing.sm }]}>
-                Do you accept to share this information with {appName}?
-              </PowmText>
-
-              <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 11, marginTop: powmSpacing.sm, textAlign: 'right' }}>
-                Encryption: {getEncryptionSchemeName(claimResponse.challenge.encrypting_scheme)}
-              </PowmText>
-            </Column>
+                <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 11, marginTop: powmSpacing.sm, textAlign: 'right' }}>
+                  Encryption: {getEncryptionSchemeName(claimResponse.challenge.encrypting_scheme)}
+                </PowmText>
+              </Column>
+            </ScrollView>
           </GlassCard>
 
-          <View style={styles.spacer} />
+          <View style={{ flex: 1 }} />
 
           {/* Action Buttons */}
           <View style={styles.buttonRow}>
@@ -208,11 +223,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerSection: {
-    marginTop: powmSpacing.xl,
+    marginTop: 0,
     alignItems: 'center',
   },
   spacer: {
-    flex: 1,
+    flex: 0.2,
   },
   questionCard: {
     padding: 24,

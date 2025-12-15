@@ -18,6 +18,27 @@ const { hash } = keyedHashing;
 // Current wallet instance cache
 let currentWallet: Wallet | null = null;
 
+export const ATTRIBUTE_DISPLAY_NAMES: Record<string, string> = {
+    'anonymous_id': 'Anonymous Unique ID',
+    'first_name': 'First Name',
+    'last_name': 'Last Name',
+    'date_of_birth': 'Date of Birth',
+    'age_over_18': 'Age Over 18',
+    'age_over_21': 'Age Over 21',
+    'nationality': 'Nationality',
+    'gender': 'Gender',
+    'email': 'Email Address',
+    'phone_number': 'Phone Number',
+};
+
+export function getAttributeDisplayName(key: string): string {
+    if (ATTRIBUTE_DISPLAY_NAMES[key]) {
+        return ATTRIBUTE_DISPLAY_NAMES[key];
+    }
+    // Fallback: replace underscores with spaces and capitalize words
+    return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
 /**
  * Load and cache the current wallet
  * @param forceReload - If true, reload from storage even if cached

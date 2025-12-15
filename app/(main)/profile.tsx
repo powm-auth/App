@@ -35,33 +35,23 @@ export default function ProfileScreen() {
 
   const menuSections: MenuSection[] = [
     {
-      title: 'My informations',
+      title: 'Wallet',
       items: [
         {
           icon: 'face',
-          label: 'Personal information',
+          label: 'Identity',
           onPress: () => router.push('/personal-info'),
         },
         {
-          icon: 'id',
-          label: 'Identity documents',
-          onPress: () => router.push('/identity-documents'),
+          icon: 'data',
+          label: 'Data',
+          onPress: () => router.push('/my-data'),
         },
       ],
     },
     {
-      title: 'Account',
+      title: 'Application',
       items: [
-        {
-          icon: 'data',
-          label: 'My data',
-          onPress: () => router.push('/my-data'),
-        },
-        {
-          icon: 'profile',
-          label: 'Account',
-          onPress: () => router.push('/account'),
-        },
         {
           icon: 'bell',
           label: 'Notifications',

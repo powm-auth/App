@@ -1,9 +1,9 @@
-import { PowmIcon, PowmIconName } from './PowmIcon';
-import { PowmText } from './PowmText';
-import { Row } from './Row';
 import { powmColors } from '@/theme/powm-tokens';
 import React from 'react';
 import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { PowmIcon, PowmIconName } from './PowmIcon';
+import { PowmText } from './PowmText';
+import { Row } from './Row';
 
 interface ListItemProps {
   title: string;
@@ -14,6 +14,7 @@ interface ListItemProps {
   onPress?: () => void;
   style?: ViewStyle;
   showChevron?: boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -29,6 +30,7 @@ export const ListItem: React.FC<ListItemProps> = ({
   onPress,
   style,
   showChevron = true,
+  disabled = false,
 }) => {
   return (
     <Pressable
@@ -36,9 +38,10 @@ export const ListItem: React.FC<ListItemProps> = ({
       style={({ pressed }) => [
         styles.container,
         pressed && { backgroundColor: powmColors.glass.pressed },
+        disabled && { opacity: 0.5 },
         style,
       ]}
-      disabled={!onPress}
+      disabled={disabled || !onPress}
     >
       <Row gap={16} align="center">
         {icon && (

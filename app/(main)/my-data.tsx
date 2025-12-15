@@ -159,25 +159,32 @@ export default function MyDataScreen() {
 
           {/* Recovery Section */}
           <Column gap={powmSpacing.md}>
-            <PowmText variant="subtitle" style={styles.sectionTitle}>Recovery & Backup</PowmText>
+            <PowmText variant="subtitle" style={styles.sectionTitle}>
+              Recovery & Backup{' '}
+              <PowmText variant="text" color={powmColors.orangeElectricMain} style={{ fontSize: 13, fontWeight: '600', fontStyle: 'italic' }}>
+                Coming Soon
+              </PowmText>
+            </PowmText>
 
-            <GlassCard padding={0}>
+            <GlassCard padding={0} style={{ opacity: 0.5 }}>
               <ListItem
                 title="Crypto Codes"
                 subtitle="View your recovery phrase"
                 icon="data"
-                iconColor={powmColors.orangeElectricMain}
-                onPress={() => Alert.alert("Crypto Codes", "A-1234-B-5678-C-9012")}
+                iconColor={powmColors.inactive}
+                onPress={() => { }}
                 showChevron
+                disabled
               />
               <View style={styles.separator} />
               <ListItem
                 title="Encrypted Backup"
-                subtitle={isBackupLoading ? "Uploading..." : "Upload save to Powm servers"}
-                icon={isBackupLoading ? "clock" : "data"}
-                iconColor={powmColors.electricMain}
-                onPress={handleBackup}
+                subtitle="Upload save to Powm servers"
+                icon="data"
+                iconColor={powmColors.inactive}
+                onPress={() => { }}
                 showChevron
+                disabled
               />
             </GlassCard>
           </Column>
@@ -186,12 +193,15 @@ export default function MyDataScreen() {
 
           {/* Danger Zone */}
           <Column gap={powmSpacing.md}>
-            <PowmText variant="subtitle" style={[styles.sectionTitle, { color: powmColors.deletionRedHard }]}>Danger Zone</PowmText>
+            <PowmText variant="subtitle" style={[styles.sectionTitle, { color: '#FF4545' }]}>Danger Zone</PowmText>
 
             {/* Rotate Anonymizing Key */}
-            <Pressable style={styles.warningCard} onPress={handleRotateAnonymizingKey}>
+            <Pressable
+              style={({ pressed }) => [styles.warningCard, pressed && { opacity: 0.8 }]}
+              onPress={handleRotateAnonymizingKey}
+            >
               <LinearGradient
-                colors={['rgba(255, 159, 10, 0.1)', 'rgba(255, 159, 10, 0.05)']}
+                colors={['rgba(255, 159, 10, 0.15)', 'rgba(255, 159, 10, 0.08)']}
                 style={StyleSheet.absoluteFill}
               />
               <Row align="center" gap={16}>
@@ -201,29 +211,33 @@ export default function MyDataScreen() {
                 <Column flex={1}>
                   <PowmText variant="subtitleSemiBold" color={powmColors.orangeElectricMain}>Reset Anonymous ID</PowmText>
                   <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>
-                    Start fresh with a new anonymous identity
+                    Click to learn more
                   </PowmText>
                 </Column>
-                <PowmIcon name="chevronRight" size={16} color={powmColors.inactive} />
+                <PowmIcon name="chevron" size={16} color={powmColors.orangeElectricMain} />
               </Row>
             </Pressable>
 
             {/* Delete Everything */}
-            <Pressable style={styles.dangerCard} onPress={handleDeleteAll}>
+            <Pressable
+              style={({ pressed }) => [styles.dangerCard, pressed && { opacity: 0.8 }]}
+              onPress={handleDeleteAll}
+            >
               <LinearGradient
-                colors={['rgba(255, 69, 58, 0.1)', 'rgba(255, 69, 58, 0.05)']}
+                colors={['rgba(255, 69, 58, 0.15)', 'rgba(255, 69, 58, 0.08)']}
                 style={StyleSheet.absoluteFill}
               />
               <Row align="center" gap={16}>
                 <View style={[styles.iconCircle, { backgroundColor: 'rgba(255, 69, 58, 0.2)' }]}>
-                  <PowmIcon name="cross" size={22} color={powmColors.deletionRedHard} />
+                  <PowmIcon name="cross" size={22} color={powmColors.deletionRedMain} />
                 </View>
                 <Column flex={1}>
-                  <PowmText variant="subtitleSemiBold" color={powmColors.deletionRedHard}>Delete Everything</PowmText>
+                  <PowmText variant="subtitleSemiBold" color={powmColors.deletionRedMain}>Delete Everything</PowmText>
                   <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>
                     Wipe all data from this device
                   </PowmText>
                 </Column>
+                <PowmIcon name="chevron" size={16} color={powmColors.deletionRedMain} />
               </Row>
             </Pressable>
           </Column>

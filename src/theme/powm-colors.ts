@@ -31,6 +31,7 @@ export const powmColors = {
   // Deletion/Error
   deletionRedHard: '#7B2425',
   deletionRedAlt: '#4D1617',
+  deletionRedMain: '#FF453A',
 
   // Glass Morphism
   glass: {
