@@ -178,29 +178,51 @@ export default function ValidateIdentityScreen() {
               variant="primary"
               icon={accepting ? undefined : "check"}
               onPress={async () => {
-                try {
-                  // Authenticate user before accepting challenge
-                  const result = await LocalAuthentication.authenticateAsync();
+                const handleAccept = async () => {
+                  try {
+                    // Authenticate user before accepting challenge
+                    const result = await LocalAuthentication.authenticateAsync();
 
-                  if (!result.success) {
-                    // User cancelled or authentication failed - just return
-                    return;
+                    if (!result.success) {
+                      // User cancelled or authentication failed - just return
+                      return;
+                    }
+
+                    setAccepting(true);
+                    setLoadingMessage('Accepting challenge...');
+                    await acceptChallenge(challengeId, wallet, claimResponse);
+                    setLoadingMessage(null);
+                    router.dismissAll();
+                  } catch (error) {
+                    console.error('Accept failed:', error);
+                    setLoadingMessage(null);
+                    Alert.alert(
+                      'Error',
+                      error instanceof Error ? error.message : 'Failed to accept challenge',
+                      [{ text: 'OK', onPress: () => setAccepting(false) }]
+                    );
                   }
+                };
 
-                  setAccepting(true);
-                  setLoadingMessage('Accepting challenge...');
-                  await acceptChallenge(challengeId, wallet, claimResponse);
-                  setLoadingMessage(null);
-                  router.dismissAll();
-                } catch (error) {
-                  console.error('Accept failed:', error);
-                  setLoadingMessage(null);
+                if (claimResponse.claim.can_accept === false) {
                   Alert.alert(
-                    'Error',
-                    error instanceof Error ? error.message : 'Failed to accept challenge',
-                    [{ text: 'OK', onPress: () => setAccepting(false) }]
+                    'Verification Required',
+                    'You need to verify your identity before you can accept this challenge.',
+                    [
+                      {
+                        text: 'Cancel',
+                        style: 'cancel',
+                      },
+                      {
+                        text: 'Proceed',
+                        onPress: handleAccept,
+                      },
+                    ]
                   );
+                  return;
                 }
+
+                await handleAccept();
               }}
               disabled={accepting || rejecting}
               style={{ flex: 1 }}

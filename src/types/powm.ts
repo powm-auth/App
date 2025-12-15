@@ -34,6 +34,7 @@ export interface ClaimChallengeResponse {
         claimed_at: string;
         reclaimed: boolean;
         wallet_id: string;
+        can_accept: boolean;
         // ADD SIGNATURE!!!!
     };
     challenge: IdentityChallenge;

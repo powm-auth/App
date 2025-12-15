@@ -3,8 +3,8 @@
  * Handles wallet operations and challenge processing
  */
 
-import { acceptIdentityChallenge, claimIdentityChallenge, rejectIdentityChallenge } from '@/services/powm-api';
-import { loadWallet, withAnonymizingKey, withSigningKey } from '@/services/wallet-storage';
+import { acceptIdentityChallenge, checkAge, claimIdentityChallenge, rejectIdentityChallenge } from '@/services/powm-api';
+import { loadWallet, updateWalletFile, withAnonymizingKey, withSigningKey } from '@/services/wallet-storage';
 import type { ClaimChallengeResponse, Wallet } from '@/types/powm';
 import { ATTRIBUTE_DEFINITIONS } from '@/utils/constants';
 import { createIdentityChallenge, decryptAndVerifyIdentity, decryptIdentityChallengeResponse, verifyIdentityChallengeSignature, waitForCompletedIdentityChallenge } from '@powm/sdk-js';
@@ -419,3 +419,65 @@ export async function pollChallenge(
         throw e;
     }
 }
+
+/**
+ * Refresh age attributes by checking with the server
+ */
+export async function refreshAgeAttributes(): Promise<void> {
+    const wallet = await getCurrentWallet();
+    if (!wallet) throw new Error('No wallet loaded');
+
+    const dateOfBirth = wallet.attributes['date_of_birth']?.value;
+    if (!dateOfBirth) throw new Error('Date of birth not set in wallet');
+
+    // Generate nonce
+    const randomBytes = Crypto.getRandomBytes(32);
+    const nonce = btoa(String.fromCharCode(...randomBytes))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '')
+        .substring(0, 32);
+
+    // Get current time
+    const time = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+    // Build signing string: {time}|{nonce}|{wallet_id}|{date_of_birth}|
+    const signingString = `${time}|${nonce}|${wallet.id}|${dateOfBirth}|`;
+
+    // Sign the string
+    const walletSignature = await withSigningKey((privateKey) => {
+        const dataBytes = Buffer.from(signingString, 'utf-8');
+        const signature = sign(
+            wallet.signing_algorithm,
+            privateKey,
+            dataBytes as any
+        );
+        return Buffer.from(signature).toString('base64');
+    });
+
+    // Call API
+    const response = await checkAge({
+        time,
+        nonce,
+        wallet_id: wallet.id,
+        date_of_birth: dateOfBirth,
+        wallet_signature: walletSignature,
+    });
+
+    // Update wallet attributes
+    const updatedAttributes = { ...wallet.attributes };
+    for (const [key, data] of Object.entries(response.attributes)) {
+        updatedAttributes[key] = {
+            value: data.value,
+            salt: data.salt
+        };
+    }
+
+    wallet.attributes = updatedAttributes;
+    wallet.updated_at = new Date();
+
+    // Save updated wallet
+    await updateWalletFile(wallet);
+    currentWallet = wallet;
+}
+

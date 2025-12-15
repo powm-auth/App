@@ -32,7 +32,7 @@ export const AttributeList: React.FC<AttributeListProps> = ({
     return (
         <View style={style}>
             {title && (
-                <PowmText variant="subtitle" align="center" style={{ fontSize: 20, marginBottom: powmSpacing.md }}>
+                <PowmText variant="subtitle" align="center" style={{ fontSize: 20, marginBottom: powmSpacing.xxl }}>
                     {title}
                 </PowmText>
             )}

@@ -7,7 +7,7 @@ import {
   PowmText,
   ScreenHeader
 } from '@/components';
-import { getAttributeDisplayName, sortAttributeKeys } from '@/services/wallet-service';
+import { getAttributeDisplayName, refreshAgeAttributes, sortAttributeKeys } from '@/services/wallet-service';
 import { loadWallet } from '@/services/wallet-storage';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import { ATTRIBUTE_DEFINITIONS } from '@/utils/constants';
@@ -78,9 +78,19 @@ export default function PersonalInfoScreen() {
         { text: "Cancel", style: "cancel" },
         {
           text: "Refresh",
-          onPress: () => {
-            // TODO: Implement age refresh logic
-            console.log("Refresh age clicked");
+          onPress: async () => {
+            try {
+              await refreshAgeAttributes();
+              // Reload wallet to update UI
+              const wallet = await loadWallet();
+              if (wallet) {
+                setAttributes(wallet.attributes);
+              }
+              Alert.alert("Success", "Age attributes refreshed successfully.");
+            } catch (error) {
+              console.error("Failed to refresh age attributes:", error);
+              Alert.alert("Error", "Failed to refresh age attributes. Please try again.");
+            }
           }
         }
       ]

@@ -342,7 +342,7 @@ export async function rotateAnonymizingKey(): Promise<boolean> {
  * Update only the wallet file data (not the secure keys)
  * Used for updating metadata like anonymizing_hashing_scheme
  */
-async function updateWalletFile(wallet: Wallet): Promise<void> {
+export async function updateWalletFile(wallet: Wallet): Promise<void> {
     const publicKeyB64 = Buffer.from(wallet.public_key).toString('base64');
 
     const fileData: WalletFileData = {

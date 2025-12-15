@@ -238,3 +238,41 @@ export async function resetAnonymizingKey(request: {
 
     return response.json();
 }
+
+/**
+ * Check age and refresh age-related attributes
+ */
+export async function checkAge(request: {
+    time: string;
+    nonce: string;
+    wallet_id: string;
+    date_of_birth: string;
+    wallet_signature: string;
+}): Promise<{
+    wallet_id: string;
+    age: number;
+    attributes: Record<string, { value: string; salt: string }>;
+}> {
+    const response = await fetchWithTimeout(
+        `${POWM_API_BASE}/wallets/check-age`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(request),
+        }
+    );
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`[PowmAPI] Failed to check age - HTTP ${response.status}: ${errorBody}`);
+        throw new PowmApiError(
+            `Failed to check age (HTTP ${response.status})`,
+            response.status,
+            errorBody
+        );
+    }
+
+    return response.json();
+}

@@ -1,19 +1,4 @@
 /**
- * Application-wide constants
- */
-
-export const APP_NAME = 'Expo App';
-export const APP_VERSION = '1.0.0';
-
-/**
- * API configuration (example)
- */
-export const API_CONFIG = {
-  baseUrl: 'https://api.example.com',
-  timeout: 10000,
-} as const;
-
-/**
  * Common animation durations (in milliseconds)
  */
 export const ANIMATION_DURATION = {
