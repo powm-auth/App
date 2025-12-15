@@ -91,7 +91,7 @@ export default function HomeScreen() {
                                             Request Identity
                                         </PowmText>
                                         <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 14 }}>
-                                            Verify someone's identity with a QR code
+                                            Generate a request to verify someone's identity
                                         </PowmText>
                                     </View>
                                     <PowmIcon name="chevron" size={20} color={powmColors.electricMain} />

@@ -205,9 +205,6 @@ export default function RequestIdentityScreen() {
 
                     {stage === 'polling' && challengeId && (
                         <Column align="center" gap={powmSpacing.lg}>
-                            <PowmText variant="subtitle" align="center">
-                                Scan to Verify Identity
-                            </PowmText>
                             <PowmText variant="text" color={powmColors.inactive} align="center">
                                 Share this QR code with the person you want to verify
                             </PowmText>
@@ -230,16 +227,12 @@ export default function RequestIdentityScreen() {
                             </GlassCard>
 
                             {/* Requested Attributes */}
-                            <GlassCard padding={powmSpacing.md} style={{ width: '100%' }}>
-                                <PowmText variant="subtitleSemiBold" style={{ marginBottom: powmSpacing.sm }}>
-                                    Requesting:
+                            <PowmText variant="text" align="center" style={{ paddingHorizontal: powmSpacing.lg }}>
+                                <PowmText color={powmColors.inactive}>Requesting: </PowmText>
+                                <PowmText color={powmColors.gray}>
+                                    {sortAttributeKeys(selectedAttributes).map(attr => getAttributeDisplayName(attr)).join(', ')}
                                 </PowmText>
-                                {selectedAttributes.map((attr, idx) => (
-                                    <PowmText key={idx} variant="text" color={powmColors.inactive}>
-                                        • {getAttributeDisplayName(attr)}
-                                    </PowmText>
-                                ))}
-                            </GlassCard>
+                            </PowmText>
 
                             {/* Status */}
                             <Row gap={8} align="center">

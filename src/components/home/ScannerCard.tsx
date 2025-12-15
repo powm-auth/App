@@ -54,9 +54,9 @@ export const ScannerCard: React.FC<ScannerCardProps> = ({ onPress }) => {
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: gradientShine }]}>
           <LinearGradient
             colors={[
-              'rgba(236, 72, 153, 0.5)', 
-              'rgba(139, 92, 246, 0.1)', 
-              'rgba(217, 70, 239, 0.5)', 
+              'rgba(236, 72, 153, 0.5)',
+              'rgba(139, 92, 246, 0.1)',
+              'rgba(217, 70, 239, 0.5)',
             ]}
             start={{ x: 0.1, y: 0.1 }}
             end={{ x: 0.9, y: 0.9 }}
@@ -67,13 +67,13 @@ export const ScannerCard: React.FC<ScannerCardProps> = ({ onPress }) => {
         <View style={styles.content}>
           <Column gap={powmSpacing.sm} style={{ alignItems: 'center' }}>
             <PowmText variant="subtitle" color="#e9d5ff">
-              Prove your age or identity
+              Share your Identity
             </PowmText>
             <PowmText variant="title" style={{ fontSize: 28, color: '#ffffff' }}>
-              QRcode Scanner
+              Scan QR Code
             </PowmText>
             <PowmText variant="text" color="#c0a0e0" align="center">
-              Website requests you to scan to prove your age to access.
+              Scan a request to securely share your verified information.
             </PowmText>
 
             <View style={styles.iconContainer}>

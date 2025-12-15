@@ -3,27 +3,41 @@ import {
   BackgroundImage,
   Button,
   GlassCard,
+  PowmIcon,
   PowmText,
   ScreenHeader
 } from '@/components';
 import { getAttributeDisplayName, sortAttributeKeys } from '@/services/wallet-service';
 import { loadWallet } from '@/services/wallet-storage';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
+import { ATTRIBUTE_DEFINITIONS } from '@/utils/constants';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const InfoItem = ({ label, value, index }: { label: string; value: string; index: number }) => {
+const InfoItem = ({ label, value, index, onRefresh }: { label: string; value?: string; index: number; onRefresh?: () => void }) => {
+  const isPlaceholder = !value;
   return (
     <AnimatedEntry index={index} slideDistance={20}>
       <View style={styles.infoItem}>
-        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13, marginBottom: 4 }}>
-          {getAttributeDisplayName(label)}
-        </PowmText>
-        <PowmText variant="subtitleSemiBold" style={{ fontSize: 16 }}>
-          {value}
-        </PowmText>
+        <View style={{ flex: 1 }}>
+          <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13, marginBottom: 4 }}>
+            {getAttributeDisplayName(label)}
+          </PowmText>
+          <PowmText
+            variant="subtitleSemiBold"
+            style={{ fontSize: 16, opacity: isPlaceholder ? 0.5 : 1 }}
+            color={isPlaceholder ? powmColors.inactive : undefined}
+          >
+            {value || 'Not provided'}
+          </PowmText>
+        </View>
+        {onRefresh && (
+          <TouchableOpacity onPress={onRefresh} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <PowmIcon name="reload" size={20} color={powmColors.electricMain} />
+          </TouchableOpacity>
+        )}
       </View>
     </AnimatedEntry>
   );
@@ -42,7 +56,13 @@ export default function PersonalInfoScreen() {
     });
   }, []);
 
-  const sortedKeys = attributes ? sortAttributeKeys(Object.keys(attributes)) : [];
+  const sortedKeys = sortAttributeKeys(
+    Object.keys(ATTRIBUTE_DEFINITIONS).filter(key => {
+      const hasValue = attributes && attributes[key] && attributes[key].value;
+      const alwaysShow = ATTRIBUTE_DEFINITIONS[key].alwaysDisplayInSettings;
+      return hasValue || alwaysShow;
+    })
+  );
 
   const handleRefreshAge = () => {
     Alert.alert(
@@ -83,11 +103,16 @@ export default function PersonalInfoScreen() {
             This information is what's stored inside your local Powm identity wallet.
           </PowmText>
 
-          {attributes && sortedKeys.length > 0 ? (
+          {sortedKeys.length > 0 ? (
             <GlassCard style={{ marginBottom: powmSpacing.xl }}>
               {sortedKeys.map((key, index) => (
                 <React.Fragment key={key}>
-                  <InfoItem label={key} value={attributes[key].value} index={index} />
+                  <InfoItem
+                    label={key}
+                    value={attributes?.[key]?.value}
+                    index={index}
+                    onRefresh={(key === 'age_over_18' || key === 'age_over_21') ? handleRefreshAge : undefined}
+                  />
                   {index < sortedKeys.length - 1 && <View style={styles.separator} />}
                 </React.Fragment>
               ))}
@@ -106,15 +131,6 @@ export default function PersonalInfoScreen() {
             onPress={() => router.push('/scan-document')}
           />
 
-          <View style={{ height: powmSpacing.md }} />
-
-          <Button
-            title="Refresh Age Attributes"
-            icon="candle"
-            variant="secondary"
-            onPress={handleRefreshAge}
-          />
-
         </ScrollView>
       </View>
     </BackgroundImage>
@@ -127,6 +143,9 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: powmSpacing.lg },
   infoItem: {
     paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   separator: {
     height: 1,
