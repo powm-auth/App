@@ -10,9 +10,10 @@ export const BREAKPOINTS = {
 
 export interface AttributeDefinition {
   label: string;
-  description?: string;
-  requestable?: boolean;
-  alwaysDisplayInSettings?: boolean;
+  description: string;
+  requestable: boolean;
+  alwaysDisplayInSettings: boolean;
+  confidentialityCritical: boolean; // if false, value is sent to Powm server during accept, which allows to re-hash with ephemeral salt, eliminating traceability
 }
 
 /**
@@ -24,66 +25,78 @@ export const ATTRIBUTE_DEFINITIONS: Record<string, AttributeDefinition> = {
     label: 'Anonymous Unique ID',
     description: 'Unique anonymous identifier',
     requestable: true,
+    alwaysDisplayInSettings: false,
+    confidentialityCritical: true,
   },
   'first_name': {
     label: 'First Name',
     description: 'Legal first name',
     requestable: true,
-    alwaysDisplayInSettings: true
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: true,
   },
   'last_name': {
     label: 'Last Name',
     description: 'Legal last name',
     requestable: true,
-    alwaysDisplayInSettings: true
-  },
-  'date_of_birth': {
-    label: 'Date of Birth',
-    description: 'Date of birth',
-    requestable: true,
-    alwaysDisplayInSettings: true
-  },
-  'age_over_18': {
-    label: 'Age Over 18',
-    description: 'Verify adult status',
-    requestable: true,
-    alwaysDisplayInSettings: true
-  },
-  'age_over_21': {
-    label: 'Age Over 21',
-    description: 'Verify 21+ status',
-    requestable: true,
-    alwaysDisplayInSettings: true
-  },
-  'nationality_1': {
-    label: 'Nationality 1',
-    description: 'First nationality',
-    requestable: true,
-    alwaysDisplayInSettings: true
-  },
-  'nationality_2': {
-    label: 'Nationality 2',
-    description: 'Second nationality',
-    requestable: true,
-    alwaysDisplayInSettings: true
-  },
-  'nationality_3': {
-    label: 'Nationality 3',
-    description: 'Third nationality',
-    requestable: true,
-    alwaysDisplayInSettings: true
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: true,
   },
   'gender': {
     label: 'Gender',
     description: 'Gender identity',
     requestable: true,
-    alwaysDisplayInSettings: true
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: false,
+  },
+  'date_of_birth': {
+    label: 'Date of Birth',
+    description: 'Date of birth',
+    requestable: true,
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: true, // TODO: TO BE DISCUSSED!!
+  },
+  'age_over_18': {
+    label: 'Age Over 18',
+    description: 'Verify adult status',
+    requestable: true,
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: false,
+  },
+  'age_over_21': {
+    label: 'Age Over 21',
+    description: 'Verify 21+ status',
+    requestable: true,
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: false,
+  },
+  'nationality_1': {
+    label: 'Nationality 1',
+    description: 'First nationality',
+    requestable: true,
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: false,
+  },
+  'nationality_2': {
+    label: 'Nationality 2',
+    description: 'Second nationality',
+    requestable: true,
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: false,
+  },
+  'nationality_3': {
+    label: 'Nationality 3',
+    description: 'Third nationality',
+    requestable: true,
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: false,
   },
   'birth_country': {
     label: 'Birth Country',
     description: 'Country of birth',
     requestable: true,
-    alwaysDisplayInSettings: true
+    alwaysDisplayInSettings: true,
+    confidentialityCritical: false,
   },
 };
 

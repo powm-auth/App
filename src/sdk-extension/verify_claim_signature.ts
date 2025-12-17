@@ -36,6 +36,7 @@ export function verifyClaimSignature(claim: ClaimChallengeResponse['claim']): bo
         (claim.requester_display_name || '') + '|' +
         claim.encrypting_requester_key + '|' +
         (claim.can_accept ? 'true' : 'false') + '|' +
+        claim.identity_attribute_salt_key + '|' +
         claim.claimed_at + '|'
     );
 

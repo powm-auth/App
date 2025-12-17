@@ -38,6 +38,7 @@ export interface ClaimChallengeResponse {
         reclaimed: boolean;
         wallet_id: string;
         can_accept: boolean;
+        identity_attribute_salt_key: string;
         powm_signing_scheme?: string;
         powm_signature?: string;
     };
@@ -50,7 +51,7 @@ export interface AcceptChallengeRequest {
     challenge_id: string;
     wallet_id: string;
     identity_hash: string;
-    identity_attribute_hashing_salts: Record<string, string>; // NEW: Must send salts back to server
+    identity_attribute_info: Record<string, { salt: string; value?: string | null }>;
     identity_encrypting_wallet_key: string;
     identity_encrypting_nonce: string;
     identity_encrypted: string;

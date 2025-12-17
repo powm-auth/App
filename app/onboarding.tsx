@@ -60,7 +60,7 @@ const STEPS = [
         title: 'Nationality',
         description: 'Your citizenship information',
         fields: [
-            { key: 'nationality_1', label: getAttributeDisplayName('nationality_1'), required: true, type: 'country' },
+            { key: 'nationality_1', label: /*getAttributeDisplayName('nationality_1')*/'Nationality', required: true, type: 'country' },
         ]
     }
 ];
