@@ -1,5 +1,6 @@
 export * from './accept_identity_challenge';
 export * from './check_age';
+export * from './check_wallet_status';
 export * from './claim_identity_challenge';
 export * from './constants';
 export * from './delete_wallet';

@@ -67,6 +67,17 @@ export interface RejectChallengeRequest {
     wallet_signature: string;
 }
 
+export interface WalletStatusRequest {
+    time: string;
+    nonce: string;
+    wallet_id: string;
+    wallet_signature: string;
+}
+
+export interface WalletStatusResponse {
+    verified: boolean;
+}
+
 // Error types and classes
 
 export type GetIdentityChallengeErrorCode =
@@ -107,6 +118,28 @@ export class ClaimIdentityChallengeError extends Error {
         super(message);
         this.code = code;
         this.name = 'ClaimIdentityChallengeError';
+        this.statusCode = statusCode;
+        this.responseBody = responseBody;
+        this.cause = cause;
+    }
+}
+
+export type CheckWalletStatusErrorCode =
+    | 'REQUEST_FAILED'
+    | 'INVALID_SIGNATURE'
+    | 'NETWORK_ERROR'
+    | 'UNKNOWN';
+
+export class CheckWalletStatusError extends Error {
+    code: CheckWalletStatusErrorCode;
+    cause?: Error;
+    statusCode?: number;
+    responseBody?: any;
+
+    constructor(code: CheckWalletStatusErrorCode, message: string, statusCode?: number, responseBody?: any, cause?: Error) {
+        super(message);
+        this.code = code;
+        this.name = 'CheckWalletStatusError';
         this.statusCode = statusCode;
         this.responseBody = responseBody;
         this.cause = cause;

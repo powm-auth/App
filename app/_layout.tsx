@@ -1,5 +1,6 @@
 import '@/polyfills';
 import { powmColors } from '@/theme/powm-tokens';
+import { WalletStatusProvider } from '@/wallet/status';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
@@ -39,7 +40,7 @@ if ((global as any).ErrorUtils && (global as any).ErrorUtils.setGlobalHandler) {
 
 export default function RootLayout() {
   return (
-    <>
+    <WalletStatusProvider>
       <StatusBar style="light" />
       <View style={styles.container}>
         <Stack
@@ -55,10 +56,11 @@ export default function RootLayout() {
         >
           <Stack.Screen name="startup" options={{ animation: 'fade' }} />
           <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+          <Stack.Screen name="verify-identity" options={{ animation: 'fade' }} />
           <Stack.Screen name="(main)" options={{ headerShown: false }} />
         </Stack>
       </View>
-    </>
+    </WalletStatusProvider>
   );
 }
 

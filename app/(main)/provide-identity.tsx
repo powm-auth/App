@@ -183,8 +183,14 @@ export default function ValidateIdentityScreen() {
                         style: 'cancel',
                       },
                       {
-                        text: 'Proceed',
-                        onPress: handleAccept,
+                        text: 'Verify Now',
+                        onPress: () => {
+                          router.dismissAll();
+                          // Small delay to allow modals to close before navigating
+                          setTimeout(() => {
+                            router.push('/verify-identity');
+                          }, 100);
+                        },
                       },
                     ]
                   );

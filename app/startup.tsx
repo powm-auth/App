@@ -2,6 +2,7 @@ import { PowmIcon } from '@/components';
 import { PowmText } from '@/components/ui';
 import { powmColors } from '@/theme/powm-tokens';
 import { loadCurrentWallet } from '@/wallet/service';
+import { useWalletStatus } from '@/wallet/status';
 import { hasWallet, isSecureStorageAvailable } from '@/wallet/storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
@@ -10,12 +11,17 @@ import { Animated, AppState, StatusBar, StyleSheet, View } from 'react-native';
 
 export default function StartupScreen() {
     const router = useRouter();
+    const { refreshWalletStatus } = useWalletStatus();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.8)).current;
     const hasNavigated = useRef(false);
     const needsAuth = useRef(false);
     const [storageError, setStorageError] = useState(false);
     const [authError, setAuthError] = useState(false);
+    const [statusError, setStatusError] = useState(false);
+
+    // Use a ref to track if status error occurred to prevent race condition in catch block
+    const isStatusErrorRef = useRef(false);
 
     useEffect(() => {
         // Check secure storage and wallet existence
@@ -86,6 +92,16 @@ export default function StartupScreen() {
 
                 console.log('[Startup] Wallet loaded:', wallet.id);
 
+                // Check wallet status with server (Heartbeat)
+                try {
+                    await refreshWalletStatus();
+                } catch (e) {
+                    console.error('[Startup] Wallet status check failed:', e);
+                    isStatusErrorRef.current = true;
+                    setStatusError(true);
+                    return;
+                }
+
                 // Navigate immediately after authentication
                 if (!hasNavigated.current) {
                     hasNavigated.current = true;
@@ -93,7 +109,12 @@ export default function StartupScreen() {
                 }
             } catch (error) {
                 console.error('[Startup] Error:', error);
-                setStorageError(true);
+
+                // If it's the status error we've already set, don't override it with storage error
+                // We use ref because state update might not have processed yet when this catch block runs
+                if (!isStatusErrorRef.current) {
+                    setStorageError(true);
+                }
             }
         };
 
@@ -146,6 +167,19 @@ export default function StartupScreen() {
                     </PowmText>
                     <PowmText variant="text" style={styles.errorMessage}>
                         Please use a device with secure storage support.
+                    </PowmText>
+                </View>
+            ) : statusError ? (
+                <View style={styles.errorContainer}>
+                    <PowmIcon name="powmLogo" size={80} color={powmColors.electricMain} />
+                    <PowmText variant="titleBold" style={styles.errorTitle}>
+                        Connection Failed
+                    </PowmText>
+                    <PowmText variant="text" style={styles.errorMessage}>
+                        Unable to connect to the Powm server to verify wallet status.
+                    </PowmText>
+                    <PowmText variant="text" style={styles.errorMessage}>
+                        Please check your internet connection and restart the app.
                     </PowmText>
                 </View>
             ) : authError ? (

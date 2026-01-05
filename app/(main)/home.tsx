@@ -11,6 +11,8 @@ import { ScannerCard } from '@/components/home/ScannerCard';
 import { powmStyles } from '@/theme/powm-styles';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { getCurrentWallet } from '@/wallet/service';
+import { useWalletStatus } from '@/wallet/status';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -20,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function HomeScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const { status } = useWalletStatus();
 
     const wallet = getCurrentWallet();
     const firstName = wallet?.attributes?.first_name?.value || 'User';
@@ -39,6 +42,10 @@ export default function HomeScreen() {
 
     const handleMarkAllRead = () => {
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    };
+
+    const handleTestButton = () => {
+        router.push('/verify-identity');
     };
 
     const handlePresetSelect = (attributes: string[], autoStart = false) => {
@@ -171,16 +178,117 @@ export default function HomeScreen() {
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <PowmText variant="subtitleSemiBold" style={{ fontSize: 18, marginBottom: 4 }}>
-                                            Request Identity
+                                            Request Someone's Identity
                                         </PowmText>
                                         <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 14 }}>
-                                            Generate a request to verify someone's identity
+                                            Request identity information from others
                                         </PowmText>
                                     </View>
                                     <PowmIcon name="chevron" size={20} color={powmColors.electricMain} />
                                 </View>
                             </View>
                         </Pressable>
+                    </AnimatedEntry>
+
+                    {/* Verification Status Button */}
+                    <AnimatedEntry index={2}>
+                        {!status.isVerified ? (
+                            <Pressable
+                                onPress={handleTestButton}
+                                style={({ pressed }) => [
+                                    {
+                                        marginTop: powmSpacing.md,
+                                        borderRadius: powmRadii.xl,
+                                        overflow: 'hidden',
+                                    },
+                                    pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] },
+                                ]}
+                            >
+                                <View style={[styles.requestIdentityBorder, { borderColor: 'rgba(255, 154, 46, 0.3)' }]}>
+                                    <View style={styles.requestIdentityContent}>
+                                        <View style={[styles.requestIdentityIcon, { backgroundColor: 'rgba(255, 154, 46, 0.15)' }]}>
+                                            <PowmIcon name="verified" size={32} color={powmColors.orangeElectricMain} />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Row align="center" style={{ gap: 8, marginBottom: 4 }}>
+                                                <PowmText variant="subtitleSemiBold" style={{ fontSize: 18 }}>
+                                                    Verify Your Identity
+                                                </PowmText>
+                                                <View style={{
+                                                    backgroundColor: 'rgba(255, 154, 46, 0.15)', // Orange tint
+                                                    paddingHorizontal: 8,
+                                                    paddingVertical: 2,
+                                                    borderRadius: 4,
+                                                    borderWidth: 1,
+                                                    borderColor: 'rgba(255, 154, 46, 0.3)',
+                                                }}>
+                                                    <PowmText style={{
+                                                        color: powmColors.orangeElectricMain,
+                                                        fontSize: 10,
+                                                        fontWeight: '700',
+                                                        letterSpacing: 0.5
+                                                    }}>
+                                                        REQUIRED
+                                                    </PowmText>
+                                                </View>
+                                            </Row>
+                                            <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 14 }}>
+                                                Complete setup to access all features
+                                            </PowmText>
+                                        </View>
+                                        <PowmIcon name="chevron" size={20} color={powmColors.orangeElectricMain} />
+                                    </View>
+                                </View>
+                            </Pressable>
+                        ) : (
+                            <View
+                                style={{
+                                    marginTop: powmSpacing.md,
+                                    borderRadius: powmRadii.xl,
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <LinearGradient
+                                    colors={['rgba(20, 20, 25, 0.6)', 'rgba(30, 30, 35, 0.4)']}
+                                    style={{
+                                        padding: 1, // simulates border
+                                        borderRadius: powmRadii.xl,
+                                    }}
+                                >
+                                    <View style={{
+                                        backgroundColor: 'rgba(10, 10, 12, 0.6)',
+                                        borderRadius: powmRadii.xl,
+                                        padding: powmSpacing.lg,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        borderWidth: 1,
+                                        borderColor: 'rgba(50, 215, 75, 0.2)', // Green tint border
+                                    }}>
+                                        <View style={{
+                                            width: 50, height: 50,
+                                            borderRadius: 25,
+                                            backgroundColor: 'rgba(50, 215, 75, 0.08)',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginRight: powmSpacing.md,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(50, 215, 75, 0.15)'
+                                        }}>
+                                            <PowmIcon name="verified" size={24} color={powmColors.successGreen} />
+                                        </View>
+
+                                        <View style={{ flex: 1 }}>
+                                            <PowmText variant="subtitleSemiBold" style={{ fontSize: 18, marginBottom: 4 }}>
+                                                Identity Verified
+                                            </PowmText>
+                                            <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 14 }}>
+                                                You have full access.
+                                            </PowmText>
+                                        </View>
+                                    </View>
+                                </LinearGradient>
+                            </View>
+                        )}
                     </AnimatedEntry>
 
                     <View style={{ height: 100 }} />
