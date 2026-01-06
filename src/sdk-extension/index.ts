@@ -7,6 +7,7 @@ export * from './delete_wallet';
 export * from './onboard_wallet';
 export * from './reject_identity_challenge';
 export * from './reset_anonymizing_key';
+export * from './start_identity_verification';
 export * from './structs';
 export * from './utils';
 export * from './verify_claim_signature';

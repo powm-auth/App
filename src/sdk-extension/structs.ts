@@ -78,7 +78,46 @@ export interface WalletStatusResponse {
     verified: boolean;
 }
 
+export interface StartIdentityVerificationRequest {
+    time: string;
+    nonce: string;
+    wallet_id: string;
+    first_name: string;
+    last_name: string;
+    date_of_birth: string;
+    success_url: string;
+    cancel_url: string;
+    wallet_signature: string;
+}
+
+export interface StartIdentityVerificationResponse {
+    redirect_url: string;
+}
+
 // Error types and classes
+
+export type StartIdentityVerificationErrorCode =
+    | 'REQUEST_FAILED'
+    | 'INVALID_RESPONSE'
+    | 'NETWORK_ERROR'
+    | 'UNAUTHORIZED'
+    | 'UNKNOWN';
+
+export class StartIdentityVerificationError extends Error {
+    code: StartIdentityVerificationErrorCode;
+    cause?: Error;
+    statusCode?: number;
+    responseBody?: any;
+
+    constructor(code: StartIdentityVerificationErrorCode, message: string, statusCode?: number, responseBody?: any, cause?: Error) {
+        super(message);
+        this.code = code;
+        this.name = 'StartIdentityVerificationError';
+        this.statusCode = statusCode;
+        this.responseBody = responseBody;
+        this.cause = cause;
+    }
+}
 
 export type GetIdentityChallengeErrorCode =
     | 'REQUEST_FAILED'
