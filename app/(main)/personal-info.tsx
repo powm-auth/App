@@ -1,5 +1,4 @@
 import {
-  AnimatedEntry,
   BackgroundImage,
   GlassCard,
   PowmIcon,
@@ -15,30 +14,28 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const InfoItem = ({ label, value, index, onRefresh }: { label: string; value?: string; index: number; onRefresh?: () => void }) => {
+const InfoItem = ({ label, value, onRefresh }: { label: string; value?: string; onRefresh?: () => void }) => {
   const isPlaceholder = !value;
   return (
-    <AnimatedEntry index={index} slideDistance={20}>
-      <View style={styles.infoItem}>
-        <View style={{ flex: 1 }}>
-          <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13, marginBottom: 4 }}>
-            {getAttributeDisplayName(label)}
-          </PowmText>
-          <PowmText
-            variant="subtitleSemiBold"
-            style={{ fontSize: 16, opacity: isPlaceholder ? 0.5 : 1 }}
-            color={isPlaceholder ? powmColors.inactive : undefined}
-          >
-            {value || 'Not provided'}
-          </PowmText>
-        </View>
-        {onRefresh && (
-          <TouchableOpacity onPress={onRefresh} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <PowmIcon name="reload" size={20} color={powmColors.electricMain} />
-          </TouchableOpacity>
-        )}
+    <View style={styles.infoItem}>
+      <View style={{ flex: 1 }}>
+        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13, marginBottom: 4 }}>
+          {getAttributeDisplayName(label)}
+        </PowmText>
+        <PowmText
+          variant="subtitleSemiBold"
+          style={{ fontSize: 16, opacity: isPlaceholder ? 0.5 : 1 }}
+          color={isPlaceholder ? powmColors.inactive : undefined}
+        >
+          {value || 'Not provided'}
+        </PowmText>
       </View>
-    </AnimatedEntry>
+      {onRefresh && (
+        <TouchableOpacity onPress={onRefresh} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <PowmIcon name="reload" size={20} color={powmColors.electricMain} />
+        </TouchableOpacity>
+      )}
+    </View>
   );
 };
 
@@ -50,7 +47,7 @@ export default function PersonalInfoScreen() {
   useEffect(() => {
     loadWallet().then(wallet => {
       if (wallet) {
-        setAttributes(wallet.attributes);
+        setAttributes(wallet.identity_attributes);
       }
     });
   }, []);
@@ -83,7 +80,7 @@ export default function PersonalInfoScreen() {
               // Reload wallet to update UI
               const wallet = await loadWallet();
               if (wallet) {
-                setAttributes(wallet.attributes);
+                setAttributes(wallet.identity_attributes);
               }
               Alert.alert("Success", "Age attributes refreshed successfully.");
             } catch (error) {
@@ -119,7 +116,6 @@ export default function PersonalInfoScreen() {
                   <InfoItem
                     label={key}
                     value={attributes?.[key]?.value}
-                    index={index}
                     onRefresh={(key === 'age_over_18' || key === 'age_over_21') ? handleRefreshAge : undefined}
                   />
                   {index < sortedKeys.length - 1 && <View style={styles.separator} />}

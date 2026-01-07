@@ -1,5 +1,4 @@
 import {
-  AnimatedEntry,
   BackgroundImage,
   Column,
   GlassCard,
@@ -30,10 +29,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 interface FAQItemProps {
   question: string;
   answer: string;
-  index: number;
 }
 
-const FAQItem = ({ question, answer, index }: FAQItemProps) => {
+const FAQItem = ({ question, answer }: FAQItemProps) => {
   const [expanded, setExpanded] = useState(false);
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
@@ -54,29 +52,27 @@ const FAQItem = ({ question, answer, index }: FAQItemProps) => {
   });
 
   return (
-    <AnimatedEntry index={index} slideDistance={20}>
-      <GlassCard padding={0} style={{ marginBottom: powmSpacing.sm }}>
-        <Pressable onPress={toggleExpand} style={styles.questionRow}>
-          <Row align="center" gap={12} style={{ flex: 1 }}>
-            <View style={styles.dot} />
-            <PowmText variant="subtitleSemiBold" style={{ flex: 1, fontSize: 15 }}>
-              {question}
-            </PowmText>
-          </Row>
-          <Animated.View style={{ transform: [{ rotate }] }}>
-            <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
-          </Animated.View>
-        </Pressable>
+    <GlassCard padding={0} style={{ marginBottom: powmSpacing.sm }}>
+      <Pressable onPress={toggleExpand} style={styles.questionRow}>
+        <Row align="center" gap={12} style={{ flex: 1 }}>
+          <View style={styles.dot} />
+          <PowmText variant="subtitleSemiBold" style={{ flex: 1, fontSize: 15 }}>
+            {question}
+          </PowmText>
+        </Row>
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
+        </Animated.View>
+      </Pressable>
 
-        {expanded && (
-          <View style={styles.answerContainer}>
-            <PowmText variant="text" color={powmColors.inactive} style={styles.answerText}>
-              {answer}
-            </PowmText>
-          </View>
-        )}
-      </GlassCard>
-    </AnimatedEntry>
+      {expanded && (
+        <View style={styles.answerContainer}>
+          <PowmText variant="text" color={powmColors.inactive} style={styles.answerText}>
+            {answer}
+          </PowmText>
+        </View>
+      )}
+    </GlassCard>
   );
 };
 
@@ -133,7 +129,6 @@ export default function HelpScreen() {
                 key={index}
                 question={item.question}
                 answer={item.answer}
-                index={index}
               />
             ))}
           </Column>

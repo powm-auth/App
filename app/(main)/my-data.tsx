@@ -1,5 +1,4 @@
 import {
-  AnimatedEntry,
   BackgroundImage,
   Column,
   GlassCard,
@@ -8,8 +7,9 @@ import {
   PowmIconName,
   PowmText,
   Row,
-  ScreenHeader,
+  ScreenHeader
 } from '@/components';
+import { clearHistory } from '@/history/storage';
 import { deleteWalletFromServer } from '@/sdk-extension';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { ANONYMOUS_ID_INFO_MESSAGE, ANONYMOUS_ID_INFO_TITLE } from '@/utils/constants';
@@ -35,19 +35,17 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const StatCard = ({ label, value, icon, index, iconSize = 20 }: { label: string; value: string; icon: PowmIconName; index: number; iconSize?: number }) => {
+const StatCard = ({ label, value, icon, iconSize = 26 }: { label: string; value: string; icon: PowmIconName; iconSize?: number }) => {
   return (
-    <AnimatedEntry index={index} slideDistance={20} style={{ flex: 1 }}>
-      <GlassCard style={[styles.statCard, { alignItems: 'center' }]}>
-        <View style={styles.statIcon}>
-          <PowmIcon name={icon} size={iconSize} color={powmColors.electricMain} />
-        </View>
-        <Column align="center">
-          <PowmText variant="subtitleSemiBold" style={{ fontSize: 20 }} align="center">{value}</PowmText>
-          <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }} align="center">{label}</PowmText>
-        </Column>
-      </GlassCard>
-    </AnimatedEntry>
+    <GlassCard style={[styles.statCard, { alignItems: 'center', flex: 1 }]}>
+      <View style={styles.statIcon}>
+        <PowmIcon name={icon} size={iconSize} color={powmColors.electricMain} />
+      </View>
+      <Column align="center">
+        <PowmText variant="subtitleSemiBold" style={{ fontSize: 20 }} align="center">{value}</PowmText>
+        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }} align="center">{label}</PowmText>
+      </Column>
+    </GlassCard>
   );
 };
 
@@ -74,7 +72,7 @@ export default function MyDataScreen() {
           setWalletStats({
             id: wallet.id,
             created: formattedDate,
-            attributeCount: Object.keys(wallet.attributes).length,
+            attributeCount: Object.keys(wallet.identity_attributes || {}).length,
             approvedShares: wallet.stats?.approved_shares || 0
           });
         }
@@ -136,6 +134,9 @@ export default function MyDataScreen() {
                       } catch (error) {
                         console.warn('Failed to delete wallet from server (ignoring):', error);
                       }
+
+                      // Clear history
+                      await clearHistory();
 
                       // Then delete local data
                       await deleteWallet();
@@ -227,13 +228,11 @@ export default function MyDataScreen() {
               label="Wallet Created"
               value={walletStats?.created || '...'}
               icon="clock"
-              index={0}
             />
             <StatCard
               label="Approved Shares"
               value={walletStats ? walletStats.approvedShares.toString() : '...'}
               icon="check"
-              index={1}
             />
           </Row>
 
@@ -322,6 +321,7 @@ export default function MyDataScreen() {
                 <PowmIcon name="chevron" size={16} color={powmColors.deletionRedMain} />
               </Row>
             </Pressable>
+
           </Column>
 
         </ScrollView>
@@ -334,6 +334,19 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: powmSpacing.lg },
+
+  // Logo Header
+  logoHeader: {
+    marginBottom: powmSpacing.xxl,
+    marginTop: powmSpacing.md,
+    gap: 16
+  },
+  logoText: {
+    fontSize: 32,
+    letterSpacing: 3,
+    fontWeight: '700',
+    color: powmColors.electricMain,
+  },
 
   // Stats
   statsContainer: { marginBottom: powmSpacing.lg },

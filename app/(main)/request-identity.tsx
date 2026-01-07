@@ -274,9 +274,9 @@ export default function RequestIdentityScreen() {
                                         <Column gap={powmSpacing.md}>
                                             <AttributeList
                                                 title="Received Information"
-                                                attributes={sortAttributeKeys(Object.keys(identityData.attributes || {})).map(key => ({
+                                                attributes={sortAttributeKeys(Object.keys(identityData.identity_attributes || {})).map(key => ({
                                                     key,
-                                                    value: identityData.attributes[key],
+                                                    value: identityData.identity_attributes[key],
                                                     isAvailable: true
                                                 }))}
                                             />

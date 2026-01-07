@@ -12,9 +12,14 @@ export interface Wallet {
     updated_at: Date | null;
     public_key: Buffer; // SPKI DER
     signing_algorithm: string;
-    identity_attribute_hashing_scheme: string;
+    identity_attribute_hashing_scheme: string | null;
     anonymizing_hashing_scheme: string;
-    attributes: Record<string, { value: string; salt: string }>;
+    identity_attributes: Record<string, { value: string; salt: string }> | null;
+    user_details?: {
+        first_name: string;
+        last_name: string;
+        date_of_birth: string;
+    };
     stats: {
         approved_shares: number;
     };
@@ -76,6 +81,7 @@ export interface WalletStatusRequest {
 
 export interface WalletStatusResponse {
     verified: boolean;
+    identity_verification: 'not_started' | 'processing' | 'rejected' | 'accepted_awaiting_consumption' | 'completed';
 }
 
 export interface StartIdentityVerificationRequest {
@@ -92,6 +98,19 @@ export interface StartIdentityVerificationRequest {
 
 export interface StartIdentityVerificationResponse {
     redirect_url: string;
+}
+
+export interface ConsumeIdentityVerificationRequest {
+    time: string;
+    nonce: string;
+    wallet_id: string;
+    wallet_signature: string;
+}
+
+export interface ConsumeIdentityVerificationResponse {
+    wallet_id: string;
+    identity_attributes: Record<string, { value: string; salt: string }>;
+    identity_attribute_hashing_scheme: string;
 }
 
 // Error types and classes
@@ -113,6 +132,29 @@ export class StartIdentityVerificationError extends Error {
         super(message);
         this.code = code;
         this.name = 'StartIdentityVerificationError';
+        this.statusCode = statusCode;
+        this.responseBody = responseBody;
+        this.cause = cause;
+    }
+}
+
+export type ConsumeIdentityVerificationErrorCode =
+    | 'REQUEST_FAILED'
+    | 'INVALID_RESPONSE'
+    | 'NETWORK_ERROR'
+    | 'UNAUTHORIZED'
+    | 'UNKNOWN';
+
+export class ConsumeIdentityVerificationError extends Error {
+    code: ConsumeIdentityVerificationErrorCode;
+    cause?: Error;
+    statusCode?: number;
+    responseBody?: any;
+
+    constructor(code: ConsumeIdentityVerificationErrorCode, message: string, statusCode?: number, responseBody?: any, cause?: Error) {
+        super(message);
+        this.code = code;
+        this.name = 'ConsumeIdentityVerificationError';
         this.statusCode = statusCode;
         this.responseBody = responseBody;
         this.cause = cause;

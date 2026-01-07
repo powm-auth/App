@@ -8,59 +8,33 @@ import {
 import { onboardWallet } from '@/sdk-extension';
 import type { Wallet } from '@/sdk-extension/structs';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
-import { getAttributeDisplayName } from '@/wallet/service';
+import { loadCurrentWallet } from '@/wallet/service';
 import { saveWallet } from '@/wallet/storage';
 import { signing } from '@powm/sdk-js/crypto';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
 import { Buffer } from 'buffer';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActionSheetIOS, Alert, Animated, Dimensions, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal';
+import { Alert, Animated, Dimensions, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface IdentityData {
     first_name: string;
     last_name: string;
-    nationality_1: string;
-    nationality_2: string;
-    nationality_3: string;
     date_of_birth: string;
-    birth_country: string;
-    gender: string;
 }
 
 // Country picker will use built-in country list
-
-const GENDERS = ['Male', 'Female', 'Other'];
 
 const STEPS = [
     {
         id: 'personal',
         title: 'Personal Information',
-        description: 'Let\'s start with your basic information',
+        description: 'Basic details to create your wallet',
         fields: [
-            { key: 'first_name', label: getAttributeDisplayName('first_name'), required: true, type: 'text' },
-            { key: 'last_name', label: getAttributeDisplayName('last_name'), required: true, type: 'text' },
-            { key: 'gender', label: getAttributeDisplayName('gender'), required: true, type: 'gender' },
-        ]
-    },
-    {
-        id: 'birth',
-        title: 'Birth Details',
-        description: 'Information about your birth',
-        fields: [
-            { key: 'date_of_birth', label: getAttributeDisplayName('date_of_birth'), required: true, type: 'date' },
-            { key: 'birth_country', label: getAttributeDisplayName('birth_country'), required: true, type: 'country' },
-        ]
-    },
-    {
-        id: 'nationality',
-        title: 'Nationality',
-        description: 'Your citizenship information',
-        fields: [
-            { key: 'nationality_1', label: /*getAttributeDisplayName('nationality_1')*/'Nationality', required: true, type: 'country' },
+            { key: 'first_name', label: 'First Name', required: true, type: 'text' },
+            { key: 'last_name', label: 'Last Name', required: true, type: 'text' },
+            { key: 'date_of_birth', label: 'Date of Birth', required: true, type: 'date' },
         ]
     }
 ];
@@ -151,19 +125,15 @@ export default function OnboardingScreen() {
     const [identityData, setIdentityData] = useState<IdentityData>({
         first_name: '',
         last_name: '',
-        nationality_1: '',
-        nationality_2: '',
-        nationality_3: '',
         date_of_birth: '',
-        birth_country: '',
-        gender: '',
     });
 
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [dateValue, setDateValue] = useState(new Date(2004, 1, 1));
+    const defaultDate = new Date();
+    defaultDate.setFullYear(defaultDate.getFullYear() - 25); // 25 years ago
+    const [dateValue, setDateValue] = useState(defaultDate);
     const [activeCountryPicker, setActiveCountryPicker] = useState<string | null>(null);
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-    const [countryNames, setCountryNames] = useState<Record<string, string>>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -451,40 +421,18 @@ export default function OnboardingScreen() {
         }
     };
 
-    const handleCountrySelect = (country: Country, fieldKey: string) => {
-        // Use ISO country code (e.g., 'US', 'FR', 'GB')
-        const countryCode = country.cca2 || '';
-        updateField(fieldKey, countryCode as string);
-        // Store country name for display (handle the type safely)
-        const displayName = typeof country.name === 'string' ? country.name : (country.name?.common || '');
-        setCountryNames(prev => ({ ...prev, [fieldKey]: displayName }));
-        setActiveCountryPicker(null);
-    };
-
-    const handleGenderSelectIOS = () => {
-        ActionSheetIOS.showActionSheetWithOptions(
-            {
-                options: ['Cancel', ...GENDERS],
-                cancelButtonIndex: 0,
-                userInterfaceStyle: 'dark',
-            },
-            (buttonIndex) => {
-                if (buttonIndex > 0) {
-                    updateField('gender', GENDERS[buttonIndex - 1]);
-                }
-            }
-        );
-    };
-
     const canProceed = () => {
         return currentStepData.fields
             .filter(f => f.required)
-            .every(f => identityData[f.key as keyof IdentityData].trim() !== '');
+            .every(f => identityData[f.key as keyof IdentityData]?.trim() !== '');
     };
 
     const validateField = (key: string, value: string): string | null => {
-        // Validate names start with uppercase
+        // Validate names start with uppercase and have at least 2 characters
         if ((key === 'first_name' || key === 'last_name') && value) {
+            if (value.length < 2) {
+                return 'Must be at least 2 characters';
+            }
             if (!value.match(/^[A-Z]/)) {
                 return 'Must start with an uppercase letter';
             }
@@ -620,14 +568,6 @@ export default function OnboardingScreen() {
 
             // Submit onboarding request to server
             const serverResponse = await onboardWallet({
-                first_name: identityData.first_name,
-                last_name: identityData.last_name,
-                date_of_birth: identityData.date_of_birth,
-                birth_country: identityData.birth_country.toLowerCase(),
-                gender: identityData.gender.toLowerCase(),
-                nationality_1: identityData.nationality_1.toLowerCase(),
-                nationality_2: identityData.nationality_2 ? identityData.nationality_2.toLowerCase() : undefined,
-                nationality_3: identityData.nationality_3 ? identityData.nationality_3.toLowerCase() : undefined,
                 signing_scheme: 'EcdsaP256_Sha256',
                 signing_public_key: publicKey,
             });
@@ -639,9 +579,14 @@ export default function OnboardingScreen() {
                 created_at: new Date(), // this is ok because timestamp is passed in request, so server approves it 
                 updated_at: null,
                 signing_algorithm: 'EcdsaP256_Sha256',
-                identity_attribute_hashing_scheme: serverResponse.identity_attribute_hashing_scheme,
+                identity_attribute_hashing_scheme: null,
+                identity_attributes: null, // Assume attributes are null at first until verification
                 anonymizing_hashing_scheme: serverResponse.anonymizing_hashing_scheme,
-                attributes: serverResponse.identity_attributes,
+                user_details: {
+                    first_name: identityData.first_name,
+                    last_name: identityData.last_name,
+                    date_of_birth: identityData.date_of_birth,
+                },
                 stats: { approved_shares: 0 },
             };
 
@@ -653,6 +598,9 @@ export default function OnboardingScreen() {
             if (!saved) {
                 throw new Error('Failed to save wallet to secure storage');
             }
+
+            // Load wallet into memory for immediate use (force reload to clear old cache)
+            await loadCurrentWallet(true);
 
             console.log('Wallet created and registered:', wallet.id);
 
@@ -818,28 +766,13 @@ export default function OnboardingScreen() {
                                     </PowmText>
                                 </Animated.View>
 
-                                <Animated.View style={{ opacity: successSubFadeAnim, transform: [{ translateY: successSubSlideAnim }] }}>
-                                    <PowmText variant="text" style={styles.successSubMessage}>
-                                        What would you like to do next?
-                                    </PowmText>
-                                </Animated.View>
-
                                 <Animated.View style={{ opacity: successButtonsFadeAnim, transform: [{ translateY: successButtonsSlideAnim }] }}>
                                     <View style={styles.successButtons}>
                                         <Button
-                                            title="Verify Identity"
+                                            title="Let's Get Started!"
                                             variant="primary"
-                                            onPress={() => {
-                                                router.replace('/startup');
-                                                // TODO: Navigate to identity verification flow
-                                            }}
-                                            style={[styles.successButtonFull, styles.glassButtonPrimary] as any}
-                                        />
-                                        <Button
-                                            title="I'll Do This Later"
-                                            variant="secondary"
                                             onPress={() => router.replace('/startup')}
-                                            style={[styles.successButtonFull, styles.glassButtonSecondary] as any}
+                                            style={[styles.successButtonFull, styles.glassButtonPrimary] as any}
                                         />
                                     </View>
                                 </Animated.View>
@@ -874,27 +807,19 @@ export default function OnboardingScreen() {
                                         {[
                                             'first_name',
                                             'last_name',
-                                            'gender',
                                             'date_of_birth',
-                                            'birth_country',
-                                            'nationality_1',
-                                            'nationality_2',
-                                            'nationality_3',
                                         ]
                                             .filter((key) => identityData[key as keyof IdentityData]?.trim() !== '')
-                                            .map((key) => {
+                                            .map((key, index, array) => {
                                                 const value = identityData[key as keyof IdentityData];
-                                                // Display country name instead of code for country fields
-                                                const isCountryField = key === 'birth_country' || key.startsWith('nationality_');
-                                                const displayValue = isCountryField && countryNames[key] ? countryNames[key] : value;
-
+                                                const isLast = index === array.length - 1;
                                                 return (
-                                                    <View key={key} style={styles.confirmationRow}>
+                                                    <View key={key} style={[styles.confirmationRow, isLast && styles.confirmationRowLast]}>
                                                         <PowmText variant="text" style={styles.confirmationLabel}>
                                                             {key.replace(/_/g, ' ').toUpperCase()}
                                                         </PowmText>
                                                         <PowmText variant="textSemiBold" style={styles.confirmationValue}>
-                                                            {displayValue}
+                                                            {value}
                                                         </PowmText>
                                                     </View>
                                                 );
@@ -940,10 +865,10 @@ export default function OnboardingScreen() {
                         }
                     ]}
                 >
-                    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+                    <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom }]}>
                         <Column style={styles.content}>
-                            {/* Progress Bar */}
-                            <View style={styles.progressContainer}>
+                            {/* Progress Bar - Commented out for single-step flow, keeping for future multi-step expansion */}
+                            {/* <View style={styles.progressContainer}>
                                 <View style={styles.progressBar}>
                                     {STEPS.map((_, index) => (
                                         <View
@@ -958,7 +883,7 @@ export default function OnboardingScreen() {
                                 <PowmText variant="text" style={styles.progressText}>
                                     Step {currentStep + 1} of {STEPS.length}
                                 </PowmText>
-                            </View>
+                            </View> */}
 
                             <Animated.View style={{ opacity: stepFadeAnim }}>
                                 <View style={styles.header}>
@@ -1031,52 +956,6 @@ export default function OnboardingScreen() {
                                                             )
                                                         )}
                                                     </>
-                                                ) : field.type === 'country' ? (
-                                                    <>
-                                                        <Pressable
-                                                            style={styles.input}
-                                                            onPress={() => setActiveCountryPicker(field.key)}
-                                                        >
-                                                            <PowmText style={identityData[field.key as keyof IdentityData] ? styles.inputText : styles.placeholder}>
-                                                                {countryNames[field.key] || identityData[field.key as keyof IdentityData] || `Select ${field.label.toLowerCase()}`}
-                                                            </PowmText>
-                                                        </Pressable>
-                                                        <CountryPicker
-                                                            countryCode={((identityData[field.key as keyof IdentityData] as string) || 'US') as CountryCode}
-                                                            visible={activeCountryPicker === field.key}
-                                                            onClose={() => setActiveCountryPicker(null)}
-                                                            onSelect={(country) => handleCountrySelect(country, field.key)}
-                                                            withFilter
-                                                            withFlag
-                                                            withAlphaFilter
-                                                            containerButtonStyle={{ display: 'none' }}
-                                                        />
-                                                    </>
-                                                ) : field.type === 'gender' ? (
-                                                    Platform.OS === 'ios' ? (
-                                                        <Pressable
-                                                            style={styles.input}
-                                                            onPress={handleGenderSelectIOS}
-                                                        >
-                                                            <PowmText style={identityData.gender ? styles.inputText : styles.placeholder}>
-                                                                {identityData.gender || 'Select gender'}
-                                                            </PowmText>
-                                                        </Pressable>
-                                                    ) : (
-                                                        <View style={styles.pickerContainer}>
-                                                            <Picker
-                                                                selectedValue={identityData.gender}
-                                                                onValueChange={(value) => updateField('gender', value)}
-                                                                style={styles.picker}
-                                                                dropdownIconColor="rgba(255, 255, 255, 0.8)"
-                                                            >
-                                                                <Picker.Item label="Select gender" value="" />
-                                                                {GENDERS.map(gender => (
-                                                                    <Picker.Item key={gender} label={gender} value={gender} />
-                                                                ))}
-                                                            </Picker>
-                                                        </View>
-                                                    )
                                                 ) : (
                                                     <>
                                                         <TextInput
@@ -1263,6 +1142,9 @@ const styles = StyleSheet.create({
         paddingVertical: powmSpacing.xs,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    confirmationRowLast: {
+        borderBottomWidth: 0,
     },
     confirmationLabel: {
         opacity: 0.6,

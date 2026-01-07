@@ -12,7 +12,6 @@ import { powmStyles } from '@/theme/powm-styles';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { getCurrentWallet } from '@/wallet/service';
 import { useWalletStatus } from '@/wallet/status';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -25,7 +24,7 @@ export default function HomeScreen() {
     const { status } = useWalletStatus();
 
     const wallet = getCurrentWallet();
-    const firstName = wallet?.attributes?.first_name?.value || 'User';
+    const firstName = wallet?.identity_attributes?.first_name?.value || wallet?.user_details?.first_name || 'User';
 
     const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -33,7 +32,7 @@ export default function HomeScreen() {
         {
             id: '1',
             title: 'Welcome to Powm',
-            message: 'Secure your identity with our new encrypted tickets.',
+            message: 'Secure your identity with Powm!',
             type: 'info',
             timestamp: new Date(),
             read: false,
@@ -143,14 +142,25 @@ export default function HomeScreen() {
                     style={styles.scrollView}
                     contentContainerStyle={[
                         styles.content,
-                        { paddingTop: insets.top + powmSpacing.lg },
+                        { paddingTop: insets.top + powmSpacing.xxl },
                     ]}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Header */}
-                    <Row justify="space-between" align="center" style={styles.header}>
-                        <PowmText variant="title">Welcome {firstName}!</PowmText>
-                        <View style={{ width: 48, height: 48 }} />
+                    {/* Powm Logo Header */}
+                    <Row align="center" justify="space-between" style={styles.logoHeader}>
+                        <Row align="center" gap={12}>
+                            <PowmIcon name="powmLogo" size={48} color={powmColors.electricMain} />
+                            <PowmText variant="subtitle" style={styles.logoText}>POWM</PowmText>
+                        </Row>
+                        <Pressable
+                            style={styles.bellButton}
+                            onPress={() => setIsNotificationPanelOpen(true)}
+                        >
+                            <PowmIcon name="bell" size={24} color={powmColors.white} />
+                            {notifications.some((n) => !n.read) && (
+                                <View style={styles.notificationDot} />
+                            )}
+                        </Pressable>
                     </Row>
 
                     {/* 1. Scanner Card */}
@@ -191,119 +201,90 @@ export default function HomeScreen() {
                     </AnimatedEntry>
 
                     {/* Verification Status Button */}
-                    <AnimatedEntry index={2}>
-                        {!status.isVerified ? (
-                            <Pressable
-                                onPress={handleTestButton}
-                                style={({ pressed }) => [
-                                    {
-                                        marginTop: powmSpacing.md,
-                                        borderRadius: powmRadii.xl,
-                                        overflow: 'hidden',
-                                    },
-                                    pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] },
-                                ]}
-                            >
-                                <View style={[styles.requestIdentityBorder, { borderColor: 'rgba(255, 154, 46, 0.3)' }]}>
-                                    <View style={styles.requestIdentityContent}>
-                                        <View style={[styles.requestIdentityIcon, { backgroundColor: 'rgba(255, 154, 46, 0.15)' }]}>
-                                            <PowmIcon name="verified" size={32} color={powmColors.orangeElectricMain} />
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Row align="center" style={{ gap: 8, marginBottom: 4 }}>
-                                                <PowmText variant="subtitleSemiBold" style={{ fontSize: 18 }}>
-                                                    Verify Your Identity
-                                                </PowmText>
-                                                <View style={{
-                                                    backgroundColor: 'rgba(255, 154, 46, 0.15)', // Orange tint
-                                                    paddingHorizontal: 8,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 4,
-                                                    borderWidth: 1,
-                                                    borderColor: 'rgba(255, 154, 46, 0.3)',
-                                                }}>
-                                                    <PowmText style={{
-                                                        color: powmColors.orangeElectricMain,
-                                                        fontSize: 10,
-                                                        fontWeight: '700',
-                                                        letterSpacing: 0.5
-                                                    }}>
-                                                        REQUIRED
+                    {status.identityVerification !== 'completed' && (
+                        <AnimatedEntry index={2}>
+                            {(() => {
+                                const verificationStatus = status.identityVerification;
+                                let buttonColor: string = powmColors.orangeElectricMain;
+                                let buttonTitle = 'Verify Your Identity';
+                                let buttonSubtext = 'Complete setup to access all features';
+                                let badgeText = 'REQUIRED';
+                                let badgeColor = 'rgba(255, 154, 46, 0.3)';
+                                let bgColor = 'rgba(255, 154, 46, 0.15)';
+
+                                if (verificationStatus === 'processing' || verificationStatus === 'accepted_awaiting_consumption') {
+                                    buttonTitle = 'Verifying Identity';
+                                    buttonSubtext = "We're reviewing your identity";
+                                    badgeText = 'IN PROGRESS';
+                                    buttonColor = '#F5C842'  // Soft friendly yellow
+                                    badgeColor = 'rgba(245, 200, 66, 0.0)'
+                                    bgColor = 'rgba(245, 200, 66, 0.15)'
+                                } else if (verificationStatus === 'rejected') {
+                                    buttonColor = powmColors.deletionRedMain;
+                                    buttonTitle = 'Verification Failed';
+                                    buttonSubtext = 'Try verifying your identity again';
+                                    badgeText = '';
+                                    badgeColor = 'rgba(255, 69, 58, 0.3)';
+                                    bgColor = 'rgba(255, 69, 58, 0.15)';
+                                }
+
+                                return (
+                                    <Pressable
+                                        onPress={handleTestButton}
+                                        style={({ pressed }) => [
+                                            {
+                                                marginTop: powmSpacing.md,
+                                                borderRadius: powmRadii.xl,
+                                                overflow: 'hidden',
+                                            },
+                                            pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] },
+                                        ]}
+                                    >
+                                        <View style={[styles.requestIdentityBorder, { borderColor: badgeColor }]}>
+                                            <View style={styles.requestIdentityContent}>
+                                                <View style={[styles.requestIdentityIcon, { backgroundColor: bgColor }]}>
+                                                    <PowmIcon name={verificationStatus === 'rejected' ? 'info' : 'verified'} size={32} color={buttonColor} />
+                                                </View>
+                                                <View style={{ flex: 1 }}>
+                                                    <Row align="center" style={{ gap: 8, marginBottom: 4 }}>
+                                                        <PowmText variant="subtitleSemiBold" style={{ fontSize: 18 }}>
+                                                            {buttonTitle}
+                                                        </PowmText>
+                                                        {badgeText && (
+                                                            <View style={{
+                                                                backgroundColor: bgColor,
+                                                                paddingHorizontal: 8,
+                                                                paddingVertical: 2,
+                                                                borderRadius: 4,
+                                                                borderWidth: 1,
+                                                                borderColor: badgeColor,
+                                                            }}>
+                                                                <PowmText style={{
+                                                                    color: buttonColor,
+                                                                    fontSize: 10,
+                                                                    fontWeight: '700',
+                                                                    letterSpacing: 0.5
+                                                                }}>
+                                                                    {badgeText}
+                                                                </PowmText>
+                                                            </View>
+                                                        )}
+                                                    </Row>
+                                                    <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 14 }}>
+                                                        {buttonSubtext}
                                                     </PowmText>
                                                 </View>
-                                            </Row>
-                                            <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 14 }}>
-                                                Complete setup to access all features
-                                            </PowmText>
+                                                <PowmIcon name="chevron" size={20} color={buttonColor} />
+                                            </View>
                                         </View>
-                                        <PowmIcon name="chevron" size={20} color={powmColors.orangeElectricMain} />
-                                    </View>
-                                </View>
-                            </Pressable>
-                        ) : (
-                            <View
-                                style={{
-                                    marginTop: powmSpacing.md,
-                                    borderRadius: powmRadii.xl,
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <LinearGradient
-                                    colors={['rgba(20, 20, 25, 0.6)', 'rgba(30, 30, 35, 0.4)']}
-                                    style={{
-                                        padding: 1, // simulates border
-                                        borderRadius: powmRadii.xl,
-                                    }}
-                                >
-                                    <View style={{
-                                        backgroundColor: 'rgba(10, 10, 12, 0.6)',
-                                        borderRadius: powmRadii.xl,
-                                        padding: powmSpacing.lg,
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        borderWidth: 1,
-                                        borderColor: 'rgba(50, 215, 75, 0.2)', // Green tint border
-                                    }}>
-                                        <View style={{
-                                            width: 50, height: 50,
-                                            borderRadius: 25,
-                                            backgroundColor: 'rgba(50, 215, 75, 0.08)',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            marginRight: powmSpacing.md,
-                                            borderWidth: 1,
-                                            borderColor: 'rgba(50, 215, 75, 0.15)'
-                                        }}>
-                                            <PowmIcon name="verified" size={24} color={powmColors.successGreen} />
-                                        </View>
-
-                                        <View style={{ flex: 1 }}>
-                                            <PowmText variant="subtitleSemiBold" style={{ fontSize: 18, marginBottom: 4 }}>
-                                                Identity Verified
-                                            </PowmText>
-                                            <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 14 }}>
-                                                You have full access.
-                                            </PowmText>
-                                        </View>
-                                    </View>
-                                </LinearGradient>
-                            </View>
-                        )}
-                    </AnimatedEntry>
+                                    </Pressable>
+                                );
+                            })()}
+                        </AnimatedEntry>
+                    )}
 
                     <View style={{ height: 100 }} />
                 </ScrollView>
-
-                {/* Bell Button */}
-                <Pressable
-                    style={[styles.bellButton, { top: insets.top + powmSpacing.lg }]}
-                    onPress={() => setIsNotificationPanelOpen(true)}
-                >
-                    <PowmIcon name="bell" size={24} color={powmColors.white} />
-                    {notifications.some((n) => !n.read) && (
-                        <View style={styles.notificationDot} />
-                    )}
-                </Pressable>
 
             </View>
         </BackgroundImage>
@@ -320,20 +301,27 @@ const styles = StyleSheet.create({
     content: {
         paddingHorizontal: powmSpacing.lg,
     },
+    logoHeader: {
+        marginBottom: powmSpacing.xl,
+        gap: 12,
+    },
+    logoText: {
+        fontSize: 24,
+        letterSpacing: 2,
+        fontWeight: '700',
+        color: powmColors.electricMain,
+    },
     header: {
         marginBottom: powmSpacing.xl,
         height: 48,
     },
     bellButton: {
-        position: 'absolute',
-        right: powmSpacing.lg,
         width: 48,
         height: 48,
         borderRadius: powmRadii.full,
         backgroundColor: 'rgba(42, 40, 52, 0.8)',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
     },
     notificationDot: {
         position: 'absolute',

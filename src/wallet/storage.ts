@@ -25,7 +25,12 @@ interface WalletFileData {
     signing_algorithm: string;
     identity_attribute_hashing_scheme: string;
     anonymizing_hashing_scheme: string;
-    attributes: Record<string, { value: string; salt: string }>;
+    identity_attributes: Record<string, { value: string; salt: string }> | null;
+    user_details?: {
+        first_name: string;
+        last_name: string;
+        date_of_birth: string;
+    };
     stats: { approved_shares: number };
 }
 
@@ -118,7 +123,8 @@ export async function loadWallet(): Promise<Wallet | null> {
             signing_algorithm: fileData.signing_algorithm,
             identity_attribute_hashing_scheme: fileData.identity_attribute_hashing_scheme,
             anonymizing_hashing_scheme: fileData.anonymizing_hashing_scheme,
-            attributes: fileData.attributes,
+            identity_attributes: fileData.identity_attributes,
+            user_details: fileData.user_details,
             stats: fileData.stats || { approved_shares: 0 },
         };
 
@@ -213,7 +219,8 @@ export async function saveWallet(
         const fileData: WalletFileData = {
             id: wallet.id,
             public_key: publicKeyB64,
-            attributes: wallet.attributes,
+            identity_attributes: wallet.identity_attributes,
+            user_details: wallet.user_details,
             created_at: wallet.created_at.toISOString(),
             identity_attribute_hashing_scheme: wallet.identity_attribute_hashing_scheme,
             anonymizing_hashing_scheme: wallet.anonymizing_hashing_scheme,
@@ -333,7 +340,8 @@ export async function updateWalletFile(wallet: Wallet): Promise<void> {
     const fileData: WalletFileData = {
         id: wallet.id,
         public_key: publicKeyB64,
-        attributes: wallet.attributes,
+        user_details: wallet.user_details,
+        identity_attributes: wallet.identity_attributes,
         created_at: wallet.created_at.toISOString(),
         identity_attribute_hashing_scheme: wallet.identity_attribute_hashing_scheme,
         anonymizing_hashing_scheme: wallet.anonymizing_hashing_scheme,

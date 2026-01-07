@@ -62,7 +62,7 @@ export default function ValidateIdentityScreen() {
     );
   }
 
-  const walletAttrs = wallet.attributes;
+  const walletAttrs = wallet.identity_attributes || {};
 
   const handleReturnHome = () => {
     router.dismissAll();
@@ -176,7 +176,7 @@ export default function ValidateIdentityScreen() {
                 if (claimResponse.claim.can_accept === false) {
                   Alert.alert(
                     'Verification Required',
-                    'You need to verify your identity before you can accept this challenge.',
+                    'You need to verify your identity before you can provide your identity.',
                     [
                       {
                         text: 'Cancel',

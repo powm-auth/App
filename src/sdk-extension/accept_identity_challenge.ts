@@ -57,6 +57,11 @@ export async function acceptIdentityChallenge(
     const attributeInfo: Record<string, { salt: string; value?: string | null }> = {};
 
     const hashingScheme = wallet.identity_attribute_hashing_scheme;
+
+    if (!hashingScheme) {
+        throw new Error('Wallet identity_attribute_hashing_scheme is null - cannot compute hashes');
+    }
+
     const requestedAttrs = claimResponse.challenge.identity_attributes;
     const requesterId = claimResponse.claim.requester_id;
     const saltKeyB64 = claimResponse.claim.identity_attribute_salt_key;
@@ -75,9 +80,9 @@ export async function acceptIdentityChallenge(
             value = anonIdAttr.value;
             stableSalt = anonIdAttr.salt;
             includeAnonymizingKey = true;
-        } else if (attrName in wallet.attributes) {
-            value = wallet.attributes[attrName].value;
-            stableSalt = wallet.attributes[attrName].salt;
+        } else if (wallet.identity_attributes && attrName in wallet.identity_attributes) {
+            value = wallet.identity_attributes[attrName].value;
+            stableSalt = wallet.identity_attributes[attrName].salt;
         } else {
             // Wallet doesn't have this attribute - set to null and skip hash computation
             attributePayload[attrName] = null as any;

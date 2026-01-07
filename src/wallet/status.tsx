@@ -11,26 +11,28 @@ export interface WalletStatus {
     lastChecked: Date | null;
     isVerified: boolean;
     isRevoked: boolean;
+    identityVerification: 'not_started' | 'processing' | 'rejected' | 'accepted_awaiting_consumption' | 'completed';
     statusMessage: string | null;
 }
 
 interface WalletStatusContextType {
     status: WalletStatus;
     isLoading: boolean;
-    refreshWalletStatus: () => Promise<void>;
+    refreshWalletStatus: () => Promise<WalletStatus | undefined>;
 }
 
 const defaultStatus: WalletStatus = {
     lastChecked: null,
     isVerified: false,
     isRevoked: false,
+    identityVerification: 'not_started',
     statusMessage: null,
 };
 
 const WalletStatusContext = createContext<WalletStatusContextType>({
     status: defaultStatus,
     isLoading: false,
-    refreshWalletStatus: async () => { },
+    refreshWalletStatus: async () => undefined,
 });
 
 export const useWalletStatus = () => useContext(WalletStatusContext);
@@ -50,7 +52,7 @@ export const WalletStatusProvider = ({ children }: { children: ReactNode }) => {
             if (!wallet) {
                 console.warn('[WalletStatus] No wallet loaded, skipping status check');
                 setIsLoading(false);
-                return;
+                return undefined;
             }
 
             console.log(`[WalletStatus] Checking status for wallet ${wallet.id}...`);
@@ -58,12 +60,16 @@ export const WalletStatusProvider = ({ children }: { children: ReactNode }) => {
             const result = await checkWalletStatus(wallet);
             console.log('[WalletStatus] Result:', JSON.stringify(result, null, 2));
 
-            setStatus({
+            const newStatus: WalletStatus = {
                 lastChecked: new Date(),
                 isVerified: result.verified,
-                isRevoked: false, // API doesn't return revoked status yet, it throws Unauthorized if sig is valid but revoked logic might be different
+                isRevoked: false,
+                identityVerification: result.identity_verification,
                 statusMessage: result.verified ? 'Verified' : 'Not Verified'
-            });
+            };
+
+            setStatus(newStatus);
+            return newStatus;
 
         } catch (error) {
             console.error('[WalletStatus] Failed to refresh status', error);

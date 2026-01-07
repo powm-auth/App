@@ -70,34 +70,20 @@ export const ATTRIBUTE_DEFINITIONS: Record<string, AttributeDefinition> = {
     alwaysDisplayInSettings: true,
     confidentialityCritical: false,
   },
-  'nationality_1': {
-    label: 'Nationality 1',
-    description: 'First nationality',
+  'nationality': {
+    label: 'Nationality',
+    description: 'Nationality',
     requestable: true,
     alwaysDisplayInSettings: true,
     confidentialityCritical: false,
   },
-  'nationality_2': {
-    label: 'Nationality 2',
-    description: 'Second nationality',
-    requestable: true,
-    alwaysDisplayInSettings: true,
-    confidentialityCritical: false,
-  },
-  'nationality_3': {
-    label: 'Nationality 3',
-    description: 'Third nationality',
-    requestable: true,
-    alwaysDisplayInSettings: true,
-    confidentialityCritical: false,
-  },
-  'birth_country': {
-    label: 'Birth Country',
-    description: 'Country of birth',
-    requestable: true,
-    alwaysDisplayInSettings: true,
-    confidentialityCritical: false,
-  },
+  //'birth_country': {
+  //  label: 'Birth Country',
+  //  description: 'Country of birth',
+  //  requestable: true,
+  //  alwaysDisplayInSettings: true,
+  //  confidentialityCritical: false,
+  //},
 };
 
 export const ANONYMOUS_ID_INFO_TITLE = "What is an Anonymous ID?";

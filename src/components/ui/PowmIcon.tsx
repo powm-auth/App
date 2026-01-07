@@ -150,7 +150,7 @@ export const PowmIcon: React.FC<PowmIconProps> = ({
             <Path
               d="M8.625 16.8676L13.125 21.2794L24.375 10.25"
               stroke={color}
-              strokeWidth="3"
+              strokeWidth={active ? "3" : "2"}
               strokeLinecap="round"
               strokeLinejoin="round"
             />

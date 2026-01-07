@@ -1,9 +1,10 @@
 import { PowmIcon } from '@/components';
 import { PowmText } from '@/components/ui';
+import { consumeIdentityVerification } from '@/sdk-extension';
 import { powmColors } from '@/theme/powm-tokens';
 import { loadCurrentWallet } from '@/wallet/service';
 import { useWalletStatus } from '@/wallet/status';
-import { hasWallet, isSecureStorageAvailable } from '@/wallet/storage';
+import { hasWallet, isSecureStorageAvailable, updateWalletFile } from '@/wallet/storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -11,7 +12,7 @@ import { Animated, AppState, StatusBar, StyleSheet, View } from 'react-native';
 
 export default function StartupScreen() {
     const router = useRouter();
-    const { refreshWalletStatus } = useWalletStatus();
+    const { status: walletStatus, refreshWalletStatus } = useWalletStatus();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.8)).current;
     const hasNavigated = useRef(false);
@@ -19,6 +20,7 @@ export default function StartupScreen() {
     const [storageError, setStorageError] = useState(false);
     const [authError, setAuthError] = useState(false);
     const [statusError, setStatusError] = useState(false);
+    const [consumptionError, setConsumptionError] = useState(false);
 
     // Use a ref to track if status error occurred to prevent race condition in catch block
     const isStatusErrorRef = useRef(false);
@@ -93,13 +95,48 @@ export default function StartupScreen() {
                 console.log('[Startup] Wallet loaded:', wallet.id);
 
                 // Check wallet status with server (Heartbeat)
+                let currentStatus;
                 try {
-                    await refreshWalletStatus();
+                    currentStatus = await refreshWalletStatus();
                 } catch (e) {
+
                     console.error('[Startup] Wallet status check failed:', e);
                     isStatusErrorRef.current = true;
                     setStatusError(true);
                     return;
+                }
+
+                // Check if identity verification needs to be consumed
+                if (currentStatus?.identityVerification === 'accepted_awaiting_consumption') {
+                    console.log('[Startup] Identity verification awaiting consumption, consuming...');
+                    try {
+                        const consumeResult = await consumeIdentityVerification(wallet);
+                        console.log('[Startup] Successfully consumed identity verification');
+
+                        // Update wallet with the new identity attributes
+                        wallet.identity_attributes = consumeResult.identity_attributes;
+                        wallet.identity_attribute_hashing_scheme = consumeResult.identity_attribute_hashing_scheme;
+
+                        // Save the updated wallet
+                        await updateWalletFile(wallet);
+                        console.log('[Startup] Updated wallet saved with identity attributes');
+
+                        // Refresh status to get updated verification status
+                        const updatedStatus = await refreshWalletStatus();
+
+                        // Verify status is now completed
+                        if (!updatedStatus || updatedStatus.identityVerification !== 'completed') {
+                            console.error('[Startup] Expected verification status to be completed, but got:', updatedStatus?.identityVerification);
+                            setConsumptionError(true);
+                            return;
+                        }
+
+                        console.log('[Startup] Identity verification completed successfully');
+                    } catch (consumeError) {
+                        console.error('[Startup] Failed to consume identity verification:', consumeError);
+                        setConsumptionError(true);
+                        return;
+                    }
                 }
 
                 // Navigate immediately after authentication
@@ -180,6 +217,19 @@ export default function StartupScreen() {
                     </PowmText>
                     <PowmText variant="text" style={styles.errorMessage}>
                         Please check your internet connection and restart the app.
+                    </PowmText>
+                </View>
+            ) : consumptionError ? (
+                <View style={styles.errorContainer}>
+                    <PowmIcon name="powmLogo" size={80} color={powmColors.electricMain} />
+                    <PowmText variant="titleBold" style={styles.errorTitle}>
+                        Verification Consumption Failed
+                    </PowmText>
+                    <PowmText variant="text" style={styles.errorMessage}>
+                        Unable to complete identity verification setup.
+                    </PowmText>
+                    <PowmText variant="text" style={styles.errorMessage}>
+                        Please restart the app and try again.
                     </PowmText>
                 </View>
             ) : authError ? (

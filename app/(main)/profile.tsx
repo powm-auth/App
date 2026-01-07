@@ -41,10 +41,10 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     loadWallet().then((w) => {
-      if (w?.attributes) {
+      if (w) {
         setIdentity({
-          first: w.attributes.first_name?.value || 'User',
-          last: w.attributes.last_name?.value || '',
+          first: w.identity_attributes?.first_name?.value || w.user_details?.first_name || 'User',
+          last: w.identity_attributes?.last_name?.value || w.user_details?.last_name || '',
         });
       }
     });
@@ -116,26 +116,28 @@ export default function ProfileScreen() {
 
           <Column gap={powmSpacing.xl}>
             {/* Hero Identity Card */}
-            <Pressable onPress={() => router.push('/personal-info')}>
-              <GlassCard style={styles.identityCard}>
-                <Row style={{ alignItems: 'center', gap: powmSpacing.md }}>
-                  <View style={styles.avatarContainer}>
-                    <PowmText variant="title" style={{ fontSize: 24 }}>
-                      {identity?.first?.[0] || '?'}
-                    </PowmText>
-                  </View>
-                  <Column style={{ flex: 1, gap: 2 }}>
-                    <PowmText variant="subtitleSemiBold" style={{ fontSize: 18 }}>
-                      {identity ? `${identity.first} ${identity.last?.[0]}.` : 'Loading...'}
-                    </PowmText>
-                    <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13 }}>
-                      My Digital ID
-                    </PowmText>
-                  </Column>
-                  <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
-                </Row>
-              </GlassCard>
-            </Pressable>
+            <AnimatedEntry index={0}>
+              <Pressable onPress={() => router.push('/personal-info')}>
+                <GlassCard style={styles.identityCard}>
+                  <Row style={{ alignItems: 'center', gap: powmSpacing.md }}>
+                    <View style={styles.avatarContainer}>
+                      <PowmText variant="title" style={{ fontSize: 24 }}>
+                        {identity?.first?.[0] || '?'}
+                      </PowmText>
+                    </View>
+                    <Column style={{ flex: 1, gap: 2 }}>
+                      <PowmText variant="subtitleSemiBold" style={{ fontSize: 18 }}>
+                        {identity ? `${identity.first} ${identity.last?.[0]}.` : 'Loading...'}
+                      </PowmText>
+                      <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13 }}>
+                        My Digital ID
+                      </PowmText>
+                    </Column>
+                    <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
+                  </Row>
+                </GlassCard>
+              </Pressable>
+            </AnimatedEntry>
 
             {menuSections.map((section, sectionIndex) => {
               const baseIndex = menuSections.slice(0, sectionIndex).reduce(
@@ -144,23 +146,19 @@ export default function ProfileScreen() {
               );
 
               return (
-                <View key={sectionIndex} style={styles.groupContainer}>
-                  <PowmText
-                    variant="subtitleSemiBold"
-                    color={powmColors.gray}
-                    style={styles.groupTitle}
-                  >
-                    {section.title}
-                  </PowmText>
+                <AnimatedEntry key={sectionIndex} index={sectionIndex + 1}>
+                  <View style={styles.groupContainer}>
+                    <PowmText
+                      variant="subtitleSemiBold"
+                      color={powmColors.gray}
+                      style={styles.groupTitle}
+                    >
+                      {section.title}
+                    </PowmText>
 
-                  <GlassCard padding={0}>
-                    {section.items.map((item, itemIndex) => (
-                      <AnimatedEntry
-                        key={itemIndex}
-                        index={baseIndex + itemIndex}
-                        slideDistance={30}
-                      >
-                        <View>
+                    <GlassCard padding={0}>
+                      {section.items.map((item, itemIndex) => (
+                        <React.Fragment key={itemIndex}>
                           <ListItem
                             title={item.label}
                             icon={item.icon}
@@ -171,11 +169,11 @@ export default function ProfileScreen() {
                           {itemIndex < section.items.length - 1 && (
                             <View style={styles.separator} />
                           )}
-                        </View>
-                      </AnimatedEntry>
-                    ))}
-                  </GlassCard>
-                </View>
+                        </React.Fragment>
+                      ))}
+                    </GlassCard>
+                  </View>
+                </AnimatedEntry>
               );
             })}
           </Column>

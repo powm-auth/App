@@ -285,10 +285,10 @@ export async function refreshAgeAttributes(): Promise<void> {
     const wallet = await getCurrentWallet();
     if (!wallet) throw new Error('No wallet loaded');
 
-    const dateOfBirth = wallet.attributes['date_of_birth']?.value;
+    const dateOfBirth = wallet.identity_attributes?.['date_of_birth']?.value;
     if (!dateOfBirth) throw new Error('Date of birth not set in wallet');
 
-    const dateOfBirthSalt = wallet.attributes['date_of_birth']?.salt;
+    const dateOfBirthSalt = wallet.identity_attributes?.['date_of_birth']?.salt;
     if (!dateOfBirthSalt) throw new Error('Date of birth salt not set in wallet');
 
     const signer = async (data: Uint8Array) => {
@@ -311,7 +311,7 @@ export async function refreshAgeAttributes(): Promise<void> {
     );
 
     // Update wallet attributes
-    const updatedAttributes = { ...wallet.attributes };
+    const updatedAttributes = { ...(wallet.identity_attributes || {}) };
     for (const [key, data] of Object.entries(response.identity_attributes)) {
         updatedAttributes[key] = {
             value: data.value,
@@ -319,7 +319,7 @@ export async function refreshAgeAttributes(): Promise<void> {
         };
     }
 
-    wallet.attributes = updatedAttributes;
+    wallet.identity_attributes = updatedAttributes;
     wallet.updated_at = new Date();
 
     // Save updated wallet
